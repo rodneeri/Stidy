@@ -877,3 +877,55 @@
   background-image: var(--neu-convex);
   box-shadow: var(--neu-raise);
 }
+
+/* --------------------------------------------------------------------------
+   12. "Breathe" — a subtle living pulse for hero accent text (e.g. the
+       dashboard "command center"). Honoured by the reduced-motion killswitch.
+   -------------------------------------------------------------------------- */
+@keyframes breathe {
+  0%, 100% { opacity: 1; transform: translateZ(0) scale(1); }
+  50%      { opacity: 0.82; transform: translateZ(0) scale(1.012); }
+}
+.breathe {
+  display: inline-block;
+  animation: breathe 4.5s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+/* --------------------------------------------------------------------------
+   13. Themed scrollbars — every scrollable surface gets a carved channel with
+       a soft neu pill that lights up the accent on hover. Theme-token driven,
+       so it adapts to all 9 themes. `.no-scrollbar` still wins (higher
+       specificity) where scrollbars are intentionally hidden.
+   -------------------------------------------------------------------------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted) / 0.55) transparent;
+}
+*::-webkit-scrollbar {
+  width: 14px;
+  height: 14px;
+}
+*::-webkit-scrollbar-track {
+  background: color-mix(in srgb, hsl(var(--surface)), black 3%);
+  border-radius: 999px;
+  box-shadow:
+    inset 1px 1px 2px hsl(var(--neu-dark)),
+    inset -1px -1px 2px hsl(var(--neu-light) / 0.5);
+}
+*::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  background-color: hsl(var(--muted) / 0.55);
+  transition: background-color 0.2s ease;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--primary) / 0.8);
+}
+*::-webkit-scrollbar-thumb:active {
+  background-color: hsl(var(--primary));
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}

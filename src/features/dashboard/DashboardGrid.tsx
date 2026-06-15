@@ -126,6 +126,25 @@ const QUOTES = [
   "Future you is built by present you. Keep going.",
   "Done is better than perfect.",
   "Focus on the next 25 minutes, not the whole syllabus.",
+  "Motivation gets you started; routine keeps you going.",
+  "The exam rewards reps, not all-nighters.",
+  "You can't read every page — so read the right ones twice.",
+  "Understanding beats memorizing. Memorizing beats nothing.",
+  "Start before you feel ready. Clarity comes from doing.",
+  "A messy page of notes beats a perfect blank one.",
+  "Study like it's open-book — then you won't need it to be.",
+  "Rest is part of the work, not a reward for it.",
+  "The hard topic you avoid is the one worth the most marks.",
+  "Quiz yourself. Recognition isn't recall.",
+  "Two focused hours beat six distracted ones.",
+  "Progress, not perfection. Just move the needle today.",
+  "Your only competition is who you were yesterday.",
+  "Teach it to an empty room — gaps reveal themselves fast.",
+  "The syllabus is the map. Don't study without it.",
+  "Discipline is choosing what you want most over what you want now.",
+  "Show up on the boring days — that's where the gap is built.",
+  "One subject at a time. Your brain isn't 30 browser tabs.",
+  "Sleep is a study tool — memory consolidates while you rest.",
 ];
 function QuoteWidget() {
   const [i, setI] = useState(0);
@@ -148,6 +167,27 @@ const TIPS = [
   "Quack! A 5-minute walk counts — memory consolidates on breaks.",
   "Quack! Re-do a past exam under time pressure.",
   "Quack! Hydrate. Seriously.",
+  "Quack! Put your phone in another room. Out of sight, out of feed.",
+  "Quack! Active recall > rereading. Close the notes and try to remember.",
+  "Quack! Space it out — review yesterday's topic before today's.",
+  "Quack! Stuck? Explain the problem to me. Half the time you'll solve it.",
+  "Quack! Make a tiny start — 5 minutes. Momentum does the rest.",
+  "Quack! Tidy desk, tidy mind. Clear the clutter before you sit.",
+  "Quack! Write the answer from memory, then check. That gap is gold.",
+  "Quack! 25 on, 5 off. The Pomodoro pond never lies.",
+  "Quack! Interleave subjects — it feels harder, it works better.",
+  "Quack! Sleep before the exam beats cramming the night before.",
+  "Quack! Turn the heading into a question, then answer it.",
+  "Quack! One past paper > ten reread chapters.",
+  "Quack! Reward yourself after a session, not during it.",
+  "Quack! Caffeine has a half-life. Don't drink it at 6pm, night owl.",
+  "Quack! Highlight less. If everything's important, nothing is.",
+  "Quack! Eat something real. Your brain runs on glucose, not vibes.",
+  "Quack! Set a tiny goal for this session. Finish it. Feel great.",
+  "Quack! Confused now? That's learning. Push 10 more minutes.",
+  "Quack! Phone notifications off. Future you says thanks.",
+  "Quack! Draw it. Diagrams stick when words slide off.",
+  "Quack! Done studying? Write 3 things you learned. Lock it in.",
 ];
 function DuckWidget() {
   const [i, setI] = useState(0);
@@ -452,17 +492,17 @@ export function DashboardGrid({ data }: { data: DashData }) {
   const available = WIDGETS.filter((w) => !items.some((i) => i.id === w.id));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <motion.div
         variants={reveal}
         initial="hidden"
         animate="show"
-        className="flex flex-wrap items-end justify-between gap-4"
+        className="flex flex-wrap items-end justify-between gap-6 py-2"
       >
-        <div>
-          <p className="eyebrow mb-1.5">Good to see you, {data.firstName}</p>
-          <h1 className="display-2">
-            Your <span className="text-gradient">command center</span>
+        <div className="space-y-2.5">
+          <p className="eyebrow">Good to see you, {data.firstName}</p>
+          <h1 className="display-2 leading-[1.14]">
+            Your <span className="text-gradient breathe">command center</span>
           </h1>
         </div>
         <div className="flex gap-2">
