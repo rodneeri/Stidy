@@ -9,30 +9,22 @@ export interface AiModelOption {
   hint: string;
 }
 
+// Every id below was verified with a real 200 completion against this account's
+// NVIDIA NIM endpoint (2026-06-15). The /v1/models list is NOT a reliable signal —
+// several listed models 404 on completion — so test before adding new ones.
 export const NVIDIA_MODELS: AiModelOption[] = [
   { value: "meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B", hint: "Balanced all-rounder" },
   {
-    value: "nvidia/llama-3.1-nemotron-70b-instruct",
-    label: "Nemotron 70B",
-    hint: "Strong reasoning & instructions",
-  },
-  { value: "qwen/qwen2.5-72b-instruct", label: "Qwen 2.5 72B", hint: "Great at maths & STEM" },
-  { value: "deepseek-ai/deepseek-r1", label: "DeepSeek R1", hint: "Deep step-by-step reasoning" },
-  {
-    value: "meta/llama-3.1-405b-instruct",
-    label: "Llama 3.1 405B",
-    hint: "Largest — hardest questions",
+    value: "mistralai/mistral-large-3-675b-instruct-2512",
+    label: "Mistral Large 3",
+    hint: "Flagship 675B — hardest questions, EN/ES",
   },
   {
-    value: "qwen/qwen2.5-coder-32b-instruct",
-    label: "Qwen 2.5 Coder 32B",
-    hint: "Code & technical problems",
+    value: "qwen/qwen3-next-80b-a3b-instruct",
+    label: "Qwen3-Next 80B",
+    hint: "Strong reasoning, maths & STEM",
   },
-  {
-    value: "mistralai/mixtral-8x22b-instruct-v0.1",
-    label: "Mixtral 8x22B",
-    hint: "Fast, multilingual (EN/ES)",
-  },
+  { value: "meta/llama-3.1-70b-instruct", label: "Llama 3.1 70B", hint: "Reliable all-rounder" },
   { value: "meta/llama-3.1-8b-instruct", label: "Llama 3.1 8B", hint: "Fastest — quick lookups" },
 ];
 

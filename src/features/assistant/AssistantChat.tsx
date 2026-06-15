@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Sparkles, Send, X, Loader2 } from "lucide-react";
+import { Sparkles, Send, X, Loader2, AlertTriangle } from "lucide-react";
 import { MathText } from "@/components/ui/MathText";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { NVIDIA_MODELS } from "@/lib/ai/catalog";
@@ -13,6 +13,13 @@ import { cn } from "@/lib/utils";
 const MODEL_OPTIONS = NVIDIA_MODELS.map((m) => ({ value: m.value, label: m.label }));
 
 type Msg = { role: "user" | "assistant"; content: string; model?: string };
+
+/**
+ * The answer label is "NVIDIA · …" when your picked model replied, or
+ * "Gemini · …" / "Groq · …" when NVIDIA was busy and it fell back. Fallback
+ * providers are less capable, so we warn when one answered.
+ */
+const isFallbackModel = (label?: string) => !!label && !label.startsWith("NVIDIA");
 
 const SUGGESTIONS = [
   "When is my next exam and what % of the grade is it?",
@@ -137,9 +144,18 @@ export function AssistantChat() {
                   >
                     <MathText>{m.content}</MathText>
                   </div>
-                  {m.model && (
-                    <p className="mt-1 px-1 text-[10px] text-muted">via {m.model}</p>
-                  )}
+                  {m.model &&
+                    (isFallbackModel(m.model) ? (
+                      <p className="mt-1 flex items-start gap-1 px-1 text-[10px] font-medium text-warning">
+                        <AlertTriangle className="mt-px h-3 w-3 shrink-0" />
+                        <span>
+                          Fallback · {m.model} — your NVIDIA pick was busy, so a less-capable model
+                          answered. Retry in a moment for the full model.
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="mt-1 px-1 text-[10px] text-muted">via {m.model}</p>
+                    ))}
                 </div>
               ))}
               {sending && (
