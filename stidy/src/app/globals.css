@@ -1,0 +1,818 @@
+/* ==========================================================================
+   STiDY — Global stylesheet & Neumorphic Theme Engine
+   Next 16 + Tailwind v4 (CSS-first). EVERY theme is a Soft UI (neumorphism)
+   variant sculpted from one surface with a dual light/dark shadow, a convex
+   sheen and an inner bevel. Palette: a calm, cool teal / cyan / blue family.
+   Themes swap via [data-theme] on <html>.
+   ========================================================================== */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+/* Dark themes for any `dark:` utilities. */
+@custom-variant dark (&:where([data-theme="cyber"], [data-theme="soft-dark"], [data-theme="sunset"], [data-theme="graphite"], [data-theme="chalkboard"], [data-theme="cyber"] *, [data-theme="soft-dark"] *, [data-theme="sunset"] *, [data-theme="graphite"] *, [data-theme="chalkboard"] *));
+
+/* --------------------------------------------------------------------------
+   0. Shared neumorphic recipes (resolve against per-theme --neu-* / --surface)
+   -------------------------------------------------------------------------- */
+:root {
+  --neu-dist: 7px;
+  --neu-blur: 16px;
+
+  --neu-raise:
+    calc(var(--neu-dist) * -1) calc(var(--neu-dist) * -1) var(--neu-blur) hsl(var(--neu-light)),
+    var(--neu-dist) var(--neu-dist) var(--neu-blur) hsl(var(--neu-dark)),
+    inset 1px 1px 1px hsl(var(--neu-light) / 0.55),
+    inset -1px -1px 1px hsl(var(--neu-dark) / 0.45);
+
+  --neu-press:
+    inset calc(var(--neu-dist) * 0.7) calc(var(--neu-dist) * 0.7) calc(var(--neu-blur) * 0.7) hsl(var(--neu-dark)),
+    inset calc(var(--neu-dist) * -0.7) calc(var(--neu-dist) * -0.7) calc(var(--neu-blur) * 0.7) hsl(var(--neu-light));
+
+  --neu-inset:
+    inset calc(var(--neu-dist) * 0.8) calc(var(--neu-dist) * 0.8) calc(var(--neu-blur) * 0.8) hsl(var(--neu-dark)),
+    inset calc(var(--neu-dist) * -0.8) calc(var(--neu-dist) * -0.8) calc(var(--neu-blur) * 0.8) hsl(var(--neu-light) / 0.7);
+
+  --neu-convex: linear-gradient(
+    145deg,
+    color-mix(in srgb, hsl(var(--surface)), white 7%),
+    color-mix(in srgb, hsl(var(--surface)), black 7%)
+  );
+
+  /* Pressed-in counterpart of --neu-convex (light source flips). Used on :active
+     so a button reads as carved-in instead of going flat/white. */
+  --neu-concave: linear-gradient(
+    145deg,
+    color-mix(in srgb, hsl(var(--surface)), black 7%),
+    color-mix(in srgb, hsl(var(--surface)), white 7%)
+  );
+
+  --shadow-glow: 0 8px 22px -8px hsl(var(--primary) / 0.5);
+}
+
+/* --------------------------------------------------------------------------
+   1. THEME: NEXUS (default) — warm light relief, amber + coral
+   -------------------------------------------------------------------------- */
+:root,
+[data-theme="nexus"] {
+  color-scheme: light;
+  --background: 34 30% 89%;
+  --surface: 34 30% 89%;
+  --foreground: 28 22% 28%;
+  --muted: 30 12% 50%;
+  --border: 34 20% 80%;
+
+  --primary: 28 88% 52%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 12 78% 58%;
+  --accent: 28 88% 52%;
+  --ring: 28 88% 52%;
+  --success: 142 55% 44%;
+  --warning: 40 92% 52%;
+  --danger: 4 78% 58%;
+
+  --neu-light: 0 0% 100%;
+  --neu-dark: 34 22% 75%;
+
+  --mesh-1: 28 80% 80%;
+  --mesh-2: 12 75% 82%;
+  --mesh-3: 45 80% 82%;
+  --mesh-4: 20 78% 82%;
+
+  --font-ui: var(--font-dmsans), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-dmsans), system-ui, sans-serif;
+  --font-reading: "Merriweather", Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 1rem;
+}
+
+/* --------------------------------------------------------------------------
+   2. THEME: SOFT UI — light relief, sky blue + teal
+   -------------------------------------------------------------------------- */
+[data-theme="soft"] {
+  color-scheme: light;
+  --background: 208 22% 90%;
+  --surface: 208 22% 90%;
+  --foreground: 210 18% 31%;
+  --muted: 210 12% 51%;
+  --border: 208 16% 81%;
+
+  --primary: 204 84% 55%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 176 60% 44%;
+  --accent: 204 84% 55%;
+  --ring: 204 84% 55%;
+  --success: 152 52% 46%;
+  --warning: 36 90% 56%;
+  --danger: 4 76% 58%;
+
+  --neu-light: 0 0% 100%;
+  --neu-dark: 208 20% 74%;
+
+  --mesh-1: 204 80% 82%;
+  --mesh-2: 188 65% 82%;
+  --mesh-3: 176 55% 82%;
+  --mesh-4: 214 75% 84%;
+
+  --font-ui: var(--font-dmsans), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-dmsans), system-ui, sans-serif;
+  --font-reading: "Merriweather", Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 1.15rem;
+}
+
+/* --------------------------------------------------------------------------
+   3. THEME: SOFT DARK — neutral dark relief, cyan + teal
+   -------------------------------------------------------------------------- */
+[data-theme="soft-dark"] {
+  color-scheme: dark;
+  --background: 214 14% 18%;
+  --surface: 214 14% 18%;
+  --foreground: 210 16% 89%;
+  --muted: 210 10% 62%;
+  --border: 214 12% 28%;
+
+  --primary: 188 86% 56%;
+  --primary-foreground: 210 30% 10%;
+  --secondary: 168 68% 52%;
+  --accent: 188 86% 56%;
+  --ring: 188 86% 56%;
+  --success: 152 58% 52%;
+  --warning: 38 92% 58%;
+  --danger: 4 80% 62%;
+
+  --neu-light: 214 14% 30%;
+  --neu-dark: 214 26% 8%;
+
+  --mesh-1: 188 80% 40%;
+  --mesh-2: 168 60% 38%;
+  --mesh-3: 204 70% 42%;
+  --mesh-4: 196 70% 40%;
+
+  --font-ui: var(--font-dmsans), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-dmsans), system-ui, sans-serif;
+  --font-reading: "Merriweather", Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 1.15rem;
+}
+
+/* --------------------------------------------------------------------------
+   4. THEME: CYBER — neon green dark relief, lime accent, monospace
+   -------------------------------------------------------------------------- */
+[data-theme="cyber"] {
+  color-scheme: dark;
+  --background: 150 14% 12%;
+  --surface: 150 14% 12%;
+  --foreground: 140 22% 89%;
+  --muted: 140 10% 58%;
+  --border: 150 14% 21%;
+
+  --primary: 145 92% 50%;
+  --primary-foreground: 150 30% 6%;
+  --secondary: 95 85% 55%;
+  --accent: 145 92% 50%;
+  --ring: 145 92% 50%;
+  --success: 145 90% 50%;
+  --warning: 70 95% 55%;
+  --danger: 4 90% 62%;
+
+  --neu-light: 150 15% 22%;
+  --neu-dark: 150 30% 4%;
+
+  --mesh-1: 145 85% 30%;
+  --mesh-2: 95 80% 32%;
+  --mesh-3: 160 85% 30%;
+  --mesh-4: 130 80% 26%;
+
+  --font-ui: var(--font-jbmono), ui-monospace, monospace;
+  --font-display: var(--font-jbmono), ui-monospace, monospace;
+  --font-reading: var(--font-jbmono), ui-monospace, monospace;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 0.65rem;
+}
+
+/* --------------------------------------------------------------------------
+   5. THEME: METAL — Teenage-Engineering: brushed aluminium, orange, engraved
+   -------------------------------------------------------------------------- */
+[data-theme="metal"] {
+  color-scheme: light;
+  --background: 222 9% 68%;
+  --surface: 222 9% 72%;
+  --foreground: 222 18% 20%;
+  --muted: 222 8% 38%;
+  --border: 222 10% 56%;
+
+  --primary: 20 95% 48%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 222 16% 26%;
+  --accent: 20 95% 48%;
+  --ring: 20 95% 48%;
+  --success: 145 55% 36%;
+  --warning: 38 92% 46%;
+  --danger: 2 78% 52%;
+
+  --neu-light: 222 14% 86%;
+  --neu-dark: 222 18% 46%;
+  --neu-dist: 5px;
+  --neu-blur: 10px;
+
+  --mesh-1: 220 8% 78%;
+  --mesh-2: 20 90% 70%;
+  --mesh-3: 220 10% 74%;
+  --mesh-4: 30 35% 78%;
+
+  --font-ui: var(--font-grotesk), system-ui, sans-serif;
+  --font-display: var(--font-grotesk), system-ui, sans-serif;
+  --font-reading: var(--font-grotesk), Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 0.55rem;
+}
+
+/* --------------------------------------------------------------------------
+   6. THEME: AURORA — light relief, violet + cyan (calm, premium)
+   -------------------------------------------------------------------------- */
+[data-theme="aurora"] {
+  color-scheme: light;
+  --background: 250 30% 92%;
+  --surface: 250 30% 92%;
+  --foreground: 256 24% 27%;
+  --muted: 252 12% 50%;
+  --border: 250 20% 83%;
+
+  --primary: 262 83% 62%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 190 80% 48%;
+  --accent: 262 83% 62%;
+  --ring: 262 83% 62%;
+  --success: 150 55% 45%;
+  --warning: 40 92% 55%;
+  --danger: 350 80% 60%;
+
+  --neu-light: 0 0% 100%;
+  --neu-dark: 250 22% 78%;
+
+  --mesh-1: 262 80% 85%;
+  --mesh-2: 190 75% 84%;
+  --mesh-3: 300 70% 87%;
+  --mesh-4: 220 80% 87%;
+
+  --font-ui: var(--font-dmsans), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-dmsans), system-ui, sans-serif;
+  --font-reading: "Merriweather", Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 1.2rem;
+}
+
+/* --------------------------------------------------------------------------
+   7. THEME: SUNSET — warm dark relief, amber + rose (cozy)
+   -------------------------------------------------------------------------- */
+[data-theme="sunset"] {
+  color-scheme: dark;
+  --background: 20 14% 14%;
+  --surface: 20 14% 14%;
+  --foreground: 28 30% 90%;
+  --muted: 25 12% 62%;
+  --border: 20 12% 24%;
+
+  --primary: 22 92% 56%;
+  --primary-foreground: 20 30% 10%;
+  --secondary: 344 80% 62%;
+  --accent: 22 92% 56%;
+  --ring: 22 92% 56%;
+  --success: 150 50% 50%;
+  --warning: 40 92% 58%;
+  --danger: 0 80% 64%;
+
+  --neu-light: 20 14% 22%;
+  --neu-dark: 20 28% 7%;
+
+  --mesh-1: 22 85% 44%;
+  --mesh-2: 344 70% 44%;
+  --mesh-3: 8 80% 42%;
+  --mesh-4: 36 80% 42%;
+
+  --font-ui: var(--font-dmsans), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-dmsans), system-ui, sans-serif;
+  --font-reading: "Merriweather", Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 1.1rem;
+}
+
+/* --------------------------------------------------------------------------
+   8. THEME: GRAPHITE — slate instrument, electric-blue accent, tighter radii
+      (the "redesign": sharper, more machined than the soft presets)
+   -------------------------------------------------------------------------- */
+[data-theme="graphite"] {
+  color-scheme: dark;
+  --background: 220 12% 16%;
+  --surface: 220 12% 17%;
+  --foreground: 220 16% 91%;
+  --muted: 220 8% 58%;
+  --border: 220 10% 27%;
+
+  --primary: 210 100% 60%;
+  --primary-foreground: 220 30% 8%;
+  --secondary: 190 90% 52%;
+  --accent: 210 100% 60%;
+  --ring: 210 100% 60%;
+  --success: 150 55% 50%;
+  --warning: 40 92% 56%;
+  --danger: 0 80% 63%;
+
+  --neu-light: 220 12% 25%;
+  --neu-dark: 220 24% 8%;
+  --neu-dist: 5px;
+  --neu-blur: 12px;
+
+  --mesh-1: 210 80% 38%;
+  --mesh-2: 190 70% 36%;
+  --mesh-3: 220 30% 32%;
+  --mesh-4: 230 50% 34%;
+
+  --font-ui: var(--font-grotesk), system-ui, sans-serif;
+  --font-display: var(--font-grotesk), system-ui, sans-serif;
+  --font-reading: var(--font-grotesk), Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 0.8rem;
+}
+
+/* Honour reduced-motion (accessibility). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   5. Map semantic tokens -> Tailwind utilities
+   -------------------------------------------------------------------------- */
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-surface: hsl(var(--surface));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+  --color-border: hsl(var(--border));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-accent: hsl(var(--accent));
+  --color-ring: hsl(var(--ring));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-danger: hsl(var(--danger));
+
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-display);
+  --font-serif: var(--font-reading);
+  --font-mono: var(--font-code);
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-sm: calc(var(--radius) - 0.45rem);
+
+  --animate-mesh: mesh-drift 26s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+}
+
+/* --------------------------------------------------------------------------
+   6. Base layer
+   -------------------------------------------------------------------------- */
+@layer base {
+  * { border-color: hsl(var(--border)); }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-ui);
+    font-feature-settings: "cv02", "cv03", "cv04", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100dvh;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.022em;
+    text-wrap: balance; /* no orphaned words in headlines */
+  }
+  p { text-wrap: pretty; }
+
+  /* Data reads as data: tabular figures everywhere numbers live in tables/stats. */
+  th, td, time, [data-numeric] { font-variant-numeric: tabular-nums; }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  ::selection { background: hsl(var(--primary) / 0.28); }
+
+  /* Film grain — a single fixed, non-interactive overlay that sits above every
+     surface to break the sterile flatness of pure vector UI. Tuned per
+     color-scheme so it lifts darks without washing out lights. Honoured by the
+     reduced-motion block only insofar as it never animates. */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9000; /* top non-interactive layer; pointer-events disabled below */
+    pointer-events: none;
+    opacity: 0.025;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 140px 140px;
+  }
+  [data-theme="soft-dark"] body::after,
+  [data-theme="cyber"] body::after { opacity: 0.04; mix-blend-mode: overlay; }
+}
+
+/* --------------------------------------------------------------------------
+   7. Neumorphic component utilities (used app-wide across all themes)
+   -------------------------------------------------------------------------- */
+@layer components {
+  .neu,
+  .glass {
+    background-color: hsl(var(--surface));
+    background-image: var(--neu-convex);
+    border-radius: var(--radius);
+    box-shadow: var(--neu-raise);
+  }
+
+  .neu-inset {
+    background-color: hsl(var(--surface));
+    border-radius: var(--radius);
+    box-shadow: var(--neu-inset);
+  }
+
+  /* Carved text-field — a crisp "dent" (not a soft bubble). */
+  .field {
+    background-color: color-mix(in srgb, hsl(var(--surface)), black 2%);
+    border-radius: var(--radius-md);
+    box-shadow:
+      inset 2px 2px 5px hsl(var(--neu-dark)),
+      inset -2px -2px 4px hsl(var(--neu-light) / 0.5);
+    transition: box-shadow 0.18s ease;
+  }
+  .field:focus,
+  .field:focus-within,
+  .field:focus-visible {
+    outline: none;
+    box-shadow:
+      inset 2px 2px 5px hsl(var(--neu-dark)),
+      inset -2px -2px 4px hsl(var(--neu-light) / 0.5),
+      0 0 0 2px hsl(var(--primary) / 0.35);
+  }
+
+  .neu-btn {
+    background-color: hsl(var(--surface));
+    background-image: var(--neu-convex);
+    color: hsl(var(--foreground));
+    border-radius: var(--radius);
+    box-shadow: var(--neu-raise);
+    transition:
+      box-shadow 0.2s ease,
+      transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
+      color 0.2s ease,
+      background-image 0.2s ease;
+  }
+  .neu-btn:hover {
+    color: hsl(var(--primary));
+    box-shadow: var(--neu-raise), 0 0 22px -4px hsl(var(--primary) / 0.5);
+  }
+  .neu-btn:active {
+    transform: scale(0.96);
+    color: hsl(var(--primary));
+    background-image: var(--neu-concave);
+    box-shadow: var(--neu-press);
+  }
+
+  /* Adds the physical press-in feel to any element (flat or raised at rest). */
+  .pressable {
+    transition:
+      transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.18s ease;
+  }
+  .pressable:active {
+    transform: scale(0.96);
+    box-shadow: var(--neu-press);
+  }
+
+  /* Gentle hover-lift for clickable cards (coherent hover + press, one transition). */
+  .lift {
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+  }
+  .lift:hover {
+    transform: translateY(-2px);
+  }
+  .lift:active {
+    transform: scale(0.985);
+  }
+
+  /* ---- Display typography: fluid, heavy, intentional headlines ---------- */
+  .display-1 {
+    font-family: var(--font-display);
+    font-size: clamp(2.75rem, 7vw, 5.5rem);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  .display-2 {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4.5vw, 3.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.032em;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  .display-3 {
+    font-family: var(--font-display);
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    line-height: 1.1;
+    letter-spacing: -0.026em;
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  /* Small, tracked label that sits above a display heading. */
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: hsl(var(--muted));
+  }
+  /* Accent-clipped headline text — uses the theme's own primary→secondary. */
+  .text-gradient {
+    background-image: linear-gradient(
+      100deg,
+      hsl(var(--primary)),
+      color-mix(in oklch, hsl(var(--secondary)), hsl(var(--primary)) 35%)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* ---- Deeper elevation for hero / feature surfaces --------------------- */
+  .neu-lg {
+    background-color: hsl(var(--surface));
+    background-image: var(--neu-convex);
+    border-radius: calc(var(--radius) + 0.35rem);
+    box-shadow:
+      calc(var(--neu-dist) * -1.7) calc(var(--neu-dist) * -1.7) calc(var(--neu-blur) * 1.7) hsl(var(--neu-light)),
+      calc(var(--neu-dist) * 1.7) calc(var(--neu-dist) * 1.7) calc(var(--neu-blur) * 1.7) hsl(var(--neu-dark)),
+      inset 1px 1px 1px hsl(var(--neu-light) / 0.6),
+      inset -1px -1px 1px hsl(var(--neu-dark) / 0.5);
+  }
+
+  /* Crisp top edge-light: the 1px refraction line that reads as real glass. */
+  .hairline { position: relative; }
+  .hairline::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      160deg,
+      hsl(var(--neu-light) / 0.9),
+      transparent 40%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Gimmicky neumorphic range slider — carved channel, accent fill, raised thumb. */
+  .neu-range {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 16px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .neu-range::-webkit-slider-runnable-track {
+    height: 14px;
+    border-radius: 999px;
+    box-shadow: var(--neu-inset);
+    background: linear-gradient(
+      90deg,
+      var(--fill, hsl(var(--primary))),
+      var(--fill, hsl(var(--secondary))) var(--val, 50%),
+      hsl(var(--surface)) var(--val, 50%)
+    );
+  }
+  .neu-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 26px;
+    width: 26px;
+    margin-top: -6px;
+    border-radius: 50%;
+    background-color: hsl(var(--surface));
+    background-image: var(--neu-convex);
+    box-shadow: var(--neu-raise);
+    transition: transform 0.12s ease;
+  }
+  .neu-range:active::-webkit-slider-thumb {
+    transform: scale(1.18);
+    box-shadow: var(--neu-press);
+  }
+  /* Firefox */
+  .neu-range::-moz-range-track {
+    height: 14px;
+    border-radius: 999px;
+    background: hsl(var(--surface));
+    box-shadow: var(--neu-inset);
+  }
+  .neu-range::-moz-range-progress {
+    height: 14px;
+    border-radius: 999px;
+    background: var(--fill, hsl(var(--primary)));
+  }
+  .neu-range::-moz-range-thumb {
+    height: 26px;
+    width: 26px;
+    border: none;
+    border-radius: 50%;
+    background-color: hsl(var(--surface));
+    background-image: var(--neu-convex);
+    box-shadow: var(--neu-raise);
+  }
+
+  /* Animated, very subtle ambient mesh. */
+  .mesh-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    overflow: hidden;
+    background-color: hsl(var(--background));
+  }
+  .mesh-bg::before {
+    content: "";
+    position: absolute;
+    inset: -25%;
+    opacity: 0.5;
+    background:
+      radial-gradient(40% 40% at 20% 25%, hsl(var(--mesh-1) / 0.5), transparent 70%),
+      radial-gradient(35% 35% at 80% 20%, hsl(var(--mesh-2) / 0.45), transparent 70%),
+      radial-gradient(45% 45% at 75% 80%, hsl(var(--mesh-3) / 0.42), transparent 70%),
+      radial-gradient(40% 40% at 25% 85%, hsl(var(--mesh-4) / 0.4), transparent 70%);
+    filter: blur(70px);
+    animation: var(--animate-mesh);
+  }
+
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--radius-md);
+    box-shadow: var(--neu-inset);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.06), transparent);
+    animation: var(--animate-shimmer);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   8. Keyframes
+   -------------------------------------------------------------------------- */
+@keyframes mesh-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  33%      { transform: translate3d(2%, -3%, 0) rotate(8deg) scale(1.08); }
+  66%      { transform: translate3d(-2%, 2%, 0) rotate(-6deg) scale(0.96); }
+}
+@keyframes shimmer { to { transform: translateX(100%); } }
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+/* --------------------------------------------------------------------------
+   9. METAL theme — brushed-aluminium surfaces + engraved labels (Teenage Eng.)
+   -------------------------------------------------------------------------- */
+[data-theme="metal"] .neu,
+[data-theme="metal"] .glass,
+[data-theme="metal"] .neu-btn {
+  background-image:
+    linear-gradient(180deg, hsl(0 0% 100% / 0.28), hsl(222 16% 50% / 0.16)),
+    repeating-linear-gradient(90deg, hsl(0 0% 100% / 0.035) 0 1px, transparent 1px 3px);
+  border: 1px solid hsl(0 0% 100% / 0.28);
+}
+[data-theme="metal"] .field {
+  background-image: repeating-linear-gradient(
+    90deg,
+    hsl(0 0% 100% / 0.04) 0 1px,
+    transparent 1px 3px
+  );
+}
+[data-theme="metal"] .neu-btn:active {
+  background-image: none;
+}
+/* Engrave text into the metal */
+[data-theme="metal"] h1,
+[data-theme="metal"] h2,
+[data-theme="metal"] h3,
+[data-theme="metal"] .field,
+[data-theme="metal"] .neu-btn {
+  text-shadow: 0 1px 0 hsl(0 0% 100% / 0.7);
+}
+[data-theme="metal"] .neu-btn {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Hide scrollbars (used by the iOS-style time wheel and card stacks) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   10. Engraved display headings — the carved-into-the-surface look the Metal
+       theme had, now applied in EVERY theme for a consistent tactile headline.
+       Solid headings use text-shadow; gradient-clipped headings use a
+       drop-shadow filter (text-shadow can't render on transparent glyphs).
+   -------------------------------------------------------------------------- */
+.display-1,
+.display-2,
+.display-3 {
+  text-shadow:
+    0 1px 0 hsl(var(--neu-light) / 0.7),
+    0 -1px 1px hsl(var(--neu-dark) / 0.25);
+}
+.text-gradient {
+  filter: drop-shadow(0 1px 0.4px hsl(var(--neu-light) / 0.55));
+}
+/* gradient text is transparent, so its own text-shadow would ghost — kill it */
+.text-gradient {
+  text-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   11. Skeuomorphic radial gauge ("data circles"): a carved channel, a glowing
+       accent fill that sweeps on, and a raised convex center cap. The fill is
+       animatable because --dial-p is a registered <number> custom property.
+   -------------------------------------------------------------------------- */
+@property --dial-p {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.dial {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background-color: hsl(var(--surface));
+  box-shadow: var(--neu-inset); /* carved channel the fill sits inside */
+}
+.dial__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  --dial-accent: hsl(var(--primary));
+  background: conic-gradient(
+    from -90deg,
+    var(--dial-accent) calc(var(--dial-p) * 1%),
+    transparent calc(var(--dial-p) * 1%)
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    #0000 calc(100% - var(--dial-stroke, 12px)),
+    #000 calc(100% - var(--dial-stroke, 12px) + 0.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    #0000 calc(100% - var(--dial-stroke, 12px)),
+    #000 calc(100% - var(--dial-stroke, 12px) + 0.5px)
+  );
+  filter: drop-shadow(0 0 7px var(--dial-accent));
+  transition: --dial-p 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dial__cap {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background-color: hsl(var(--surface));
+  background-image: var(--neu-convex);
+  box-shadow: var(--neu-raise);
+}
