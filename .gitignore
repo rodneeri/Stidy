@@ -38,3 +38,6 @@ SpotifyYT/
 /stidy/
 *.webp
 CLAUDE.md.bak
+
+.vercel
+.env*
