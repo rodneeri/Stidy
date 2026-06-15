@@ -5,6 +5,7 @@ import "./globals.css";
 import "katex/dist/katex.min.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/config/themes";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 // Display / headings / logo — distinctive tech-startup grotesk
 const fontDisplay = Space_Grotesk({ subsets: ["latin"], variable: "--font-grotesk" });
@@ -46,6 +47,7 @@ export default function RootLayout({
           {themeBootScript}
         </Script>
         <ThemeProvider>{children}</ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
