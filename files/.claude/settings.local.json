@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"const d=require\\('./.impeccable/design.json'\\);console.log\\('OK',d.schemaVersion,'| components:',d.components.length,'| colors:',Object.keys\\(d.extensions.colorMeta\\).length,'| rules:',d.narrative.rules.length\\)\")",
+      "Bash(py --version)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(where ffmpeg *)",
+      "Bash(where yt-dlp *)",
+      "Bash(python -c \"import yt_dlp\")",
+      "Bash(where python *)",
+      "Bash(\"C:/Users/Erick/AppData/Local/Programs/Python/Python312/python.exe\" -c \"import flask, spotipy, yt_dlp, mutagen; print\\('deps ok'\\)\")",
+      "Bash(\"C:/Users/Erick/AppData/Local/Programs/Python/Python312/python.exe\" server.py)",
+      "Bash(curl -s http://127.0.0.1:5000/api/config)",
+      "Bash(curl *)",
+      "Bash(\"C:/Users/Erick/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-8.1.1-full_build/bin/ffprobe.exe\" -hide_banner \"C:\\\\Users\\\\Erick\\\\Downloads\\\\SpotifyYT\\\\\\(búsqueda libre\\) - Rick Astley - Never Gonna Give You Up.mp3\")",
+      "Read(//tmp/**)",
+      "Bash(node --check static/app.js)",
+      "Bash(node -e ' *)",
+      "Bash(ffprobe -v quiet -show_format -show_streams \"C:/Users/Erick/Downloads/SpotifyYT/jawed - Me at the zoo.flac\")",
+      "Bash(ffprobe -v quiet -show_format -show_streams \"C:/Users/Erick/Downloads/SpotifyYT/jawed - Me at the zoo.m4a\")",
+      "Bash(taskkill *)",
+      "Bash(python server.py)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist)",
+      "Bash(ffprobe -v quiet -show_format \"C:/Users/Erick/Downloads/SpotifyYT/Daft Punk - One More Time.mp3\")",
+      "Bash(ffprobe *)",
+      "Bash(sort -u -t'\"' -k2)",
+      "Bash(node --check app.js)",
+      "Bash(ls -la static/*.png static/*.jpg static/*.ico)",
+      "Bash(python3 -c \"from PIL import Image; im=Image.open\\('static/credits.png'\\); print\\(im.size, im.mode\\)\")",
+      "Bash(python -c \"from PIL import Image; im=Image.open\\('static/credits.png'\\); print\\(im.size, im.mode\\)\")",
+      "Bash(python -m py_compile server.py core.py)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('server.py'\\).read\\(\\)\\); print\\('server.py OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('core.py'\\).read\\(\\)\\); print\\('core.py OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('server.py', encoding='utf-8'\\).read\\(\\)\\); print\\('server.py OK'\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('core.py', encoding='utf-8'\\).read\\(\\)\\); print\\('core.py OK'\\)\")"
+    ]
+  }
+}
