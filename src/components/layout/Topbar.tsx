@@ -1,7 +1,9 @@
 "use client";
 
-import { Search, Bell, LogOut } from "lucide-react";
+import { useState } from "react";
+import { Search, Bell, LogOut, Sparkles } from "lucide-react";
 import { ThemePicker } from "@/components/theme/ThemePicker";
+import { askAssistant } from "@/features/assistant/assistant-bus";
 import { signOut } from "@/app/(auth)/actions";
 
 interface TopbarProps {
@@ -11,16 +13,42 @@ interface TopbarProps {
 
 export function Topbar({ displayName, email }: TopbarProps) {
   const initial = (displayName || email || "S").charAt(0).toUpperCase();
+  const [q, setQ] = useState("");
+
+  const ask = () => {
+    const query = q.trim();
+    if (!query) return;
+    askAssistant(query); // opens the Virtual Studify assistant + sends this query
+    setQ("");
+  };
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 px-5 backdrop-blur-md">
-      <label className="neu-inset flex h-10 max-w-md flex-1 items-center gap-2.5 rounded-full px-4">
-        <Search className="h-4 w-4 text-muted" />
+      {/* Raised pill — Enter (or the spark) routes the query to the assistant. */}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          ask();
+        }}
+        className="neu lift flex h-10 max-w-md flex-1 items-center gap-2.5 rounded-full px-4 focus-within:shadow-[var(--neu-raise),0_0_0_2px_hsl(var(--primary)/0.35)]"
+      >
+        <Search className="h-4 w-4 shrink-0 text-muted" />
         <input
-          placeholder="Search subjects, resources, tasks…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Ask Studify, or search your semester…"
           className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
+          aria-label="Ask the Studify assistant"
         />
-      </label>
+        <button
+          type="submit"
+          aria-label="Ask Studify"
+          className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-full text-primary disabled:opacity-40"
+          disabled={!q.trim()}
+        >
+          <Sparkles className="h-4 w-4" />
+        </button>
+      </form>
 
       <div className="ml-auto flex items-center gap-2.5">
         <ThemePicker />

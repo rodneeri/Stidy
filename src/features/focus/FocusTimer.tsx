@@ -366,7 +366,7 @@ export function FocusTimer() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Focus</h1>
+        <h1 className="display-3">Focus</h1>
         <p className="mt-1 text-sm text-muted">Deep-work timer, stopwatch, study logging and ambience.</p>
       </header>
 
@@ -413,15 +413,22 @@ export function FocusTimer() {
                 </button>
               </div>
 
-              <div
-                className="grid h-56 w-56 place-items-center rounded-full"
-                style={{
-                  background: `conic-gradient(${
-                    mode === "focus" ? "var(--color-primary)" : "var(--color-secondary)"
-                  } ${editingCustom ? 100 : pct}%, hsl(var(--border)) 0)`,
-                }}
-              >
-                <div className="grid h-[200px] w-[200px] place-items-center rounded-full bg-background">
+              <div className="dial h-56 w-56">
+                <div
+                  className="pointer-events-none absolute inset-0 rounded-full"
+                  style={{
+                    background: `conic-gradient(from -90deg, ${
+                      mode === "focus" ? "hsl(var(--primary))" : "hsl(var(--secondary))"
+                    } ${editingCustom ? 100 : pct}%, transparent ${editingCustom ? 100 : pct}%)`,
+                    WebkitMask:
+                      "radial-gradient(farthest-side, #0000 calc(100% - 15px), #000 calc(100% - 14.5px))",
+                    mask: "radial-gradient(farthest-side, #0000 calc(100% - 15px), #000 calc(100% - 14.5px))",
+                    filter: `drop-shadow(0 0 9px ${
+                      mode === "focus" ? "hsl(var(--primary) / 0.85)" : "hsl(var(--secondary) / 0.85)"
+                    })`,
+                  }}
+                />
+                <div className="dial__cap" style={{ width: 200, height: 200 }}>
                   {editingCustom ? (
                     <div className="text-center">
                       <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted">Set timer</p>

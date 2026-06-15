@@ -7,6 +7,7 @@ import { MathText } from "@/components/ui/MathText";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { NVIDIA_MODELS } from "@/lib/ai/catalog";
 import { useAiModel } from "@/lib/ai/useAiModel";
+import { onAskAssistant } from "@/features/assistant/assistant-bus";
 import { cn } from "@/lib/utils";
 
 const MODEL_OPTIONS = NVIDIA_MODELS.map((m) => ({ value: m.value, label: m.label }));
@@ -59,6 +60,18 @@ export function AssistantChat() {
       setSending(false);
     }
   }
+
+  // Let the top-bar search (or anywhere) open this panel and ask a question.
+  const sendRef = useRef(send);
+  sendRef.current = send;
+  useEffect(
+    () =>
+      onAskAssistant((q) => {
+        setOpen(true);
+        sendRef.current(q);
+      }),
+    [],
+  );
 
   return (
     <>

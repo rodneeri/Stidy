@@ -220,7 +220,7 @@ export function CareersManager() {
     <FadeIn className="space-y-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Subjects &amp; Careers</h1>
+          <h1 className="display-3">Subjects &amp; <span className="text-gradient">Careers</span></h1>
           <p className="mt-1 text-sm text-muted">Group your courses by degree, school year or oposición.</p>
         </div>
         <div className="flex items-center gap-2">

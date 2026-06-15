@@ -349,7 +349,7 @@ export function ResourcesManager({ initialSubject = null }: { initialSubject?: s
   return (
     <FadeIn className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Resources</h1>
+        <h1 className="display-3">Resources</h1>
         <p className="mt-1 text-sm text-muted">
           Drop files to auto-file them. Drag a file by its grip to move it to another subject.
         </p>

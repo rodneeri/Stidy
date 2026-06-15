@@ -31,6 +31,7 @@ import { SyllabusUploadDialog } from "@/features/syllabus/SyllabusUploadDialog";
 import { SyllabusReviewDialog, type ReviewData } from "@/features/syllabus/SyllabusReviewDialog";
 import { SubjectMenu } from "@/features/grades/SubjectMenu";
 import { SubjectIcon } from "@/components/ui/SubjectIcon";
+import { Dial } from "@/components/ui/Dial";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { useGradeScale, formatGrade, SCALE_OPTIONS, type GradeScale } from "@/lib/grade-scale";
@@ -51,18 +52,21 @@ function GradeDial({ value }: { value: number | null }) {
   const scale = useGradeScale((s) => s.scale);
   const pct = value ?? 0;
   return (
-    <div
-      className="grid h-32 w-32 shrink-0 place-items-center rounded-full"
-      style={{
-        background: `conic-gradient(var(--color-primary) ${pct}%, hsl(var(--border)) 0)`,
-      }}
-    >
-      <div className="grid h-[104px] w-[104px] place-items-center rounded-full bg-background">
-        <span className="text-2xl font-semibold">
+    <Dial
+      value={pct}
+      size={128}
+      stroke={13}
+      className="shrink-0"
+      center={
+        <span
+          className="text-2xl font-semibold"
+          data-numeric
+          style={{ fontFamily: "var(--font-display)" }}
+        >
           {formatGrade(value, scale, { suffix: false, decimals: scale === "percent" ? 0 : 1 })}
         </span>
-      </div>
-    </div>
+      }
+    />
   );
 }
 
@@ -392,7 +396,7 @@ export function GradeEngine({ autoImport = false }: { autoImport?: boolean }) {
     <FadeIn className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Grade Engine</h1>
+          <h1 className="display-3">Grade <span className="text-gradient">Engine</span></h1>
           <p className="mt-1 text-sm text-muted">
             Weighted average, What-If scenarios & the Target Solver.
           </p>

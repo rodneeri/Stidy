@@ -7,7 +7,7 @@ export function GlassCard({
   ...props
 }: React.ComponentProps<"div">) {
   return (
-    <div className={cn("glass p-5", className)} {...props}>
+    <div className={cn("glass hairline p-5", className)} {...props}>
       {children}
     </div>
   );

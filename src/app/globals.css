@@ -11,7 +11,7 @@
 @plugin "@tailwindcss/typography";
 
 /* Dark themes for any `dark:` utilities. */
-@custom-variant dark (&:where([data-theme="cyber"], [data-theme="soft-dark"], [data-theme="cyber"] *, [data-theme="soft-dark"] *));
+@custom-variant dark (&:where([data-theme="cyber"], [data-theme="soft-dark"], [data-theme="sunset"], [data-theme="graphite"], [data-theme="chalkboard"], [data-theme="cyber"] *, [data-theme="soft-dark"] *, [data-theme="sunset"] *, [data-theme="graphite"] *, [data-theme="chalkboard"] *));
 
 /* --------------------------------------------------------------------------
    0. Shared neumorphic recipes (resolve against per-theme --neu-* / --surface)
@@ -227,6 +227,152 @@
   --font-reading: var(--font-grotesk), Georgia, serif;
   --font-code: var(--font-jbmono), ui-monospace, monospace;
   --radius: 0.55rem;
+}
+
+/* --------------------------------------------------------------------------
+   6. THEME: AURORA — light relief, violet + cyan (calm, premium)
+   -------------------------------------------------------------------------- */
+[data-theme="aurora"] {
+  color-scheme: light;
+  --background: 250 30% 92%;
+  --surface: 250 30% 92%;
+  --foreground: 256 24% 27%;
+  --muted: 252 12% 50%;
+  --border: 250 20% 83%;
+
+  --primary: 262 83% 62%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 190 80% 48%;
+  --accent: 262 83% 62%;
+  --ring: 262 83% 62%;
+  --success: 150 55% 45%;
+  --warning: 40 92% 55%;
+  --danger: 350 80% 60%;
+
+  --neu-light: 0 0% 100%;
+  --neu-dark: 250 22% 78%;
+
+  --mesh-1: 262 80% 85%;
+  --mesh-2: 190 75% 84%;
+  --mesh-3: 300 70% 87%;
+  --mesh-4: 220 80% 87%;
+
+  --font-ui: var(--font-dmsans), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-dmsans), system-ui, sans-serif;
+  --font-reading: "Merriweather", Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 1.2rem;
+}
+
+/* --------------------------------------------------------------------------
+   7. THEME: SUNSET — warm dark relief, amber + rose (cozy)
+   -------------------------------------------------------------------------- */
+[data-theme="sunset"] {
+  color-scheme: dark;
+  --background: 20 14% 14%;
+  --surface: 20 14% 14%;
+  --foreground: 28 30% 90%;
+  --muted: 25 12% 62%;
+  --border: 20 12% 24%;
+
+  --primary: 22 92% 56%;
+  --primary-foreground: 20 30% 10%;
+  --secondary: 344 80% 62%;
+  --accent: 22 92% 56%;
+  --ring: 22 92% 56%;
+  --success: 150 50% 50%;
+  --warning: 40 92% 58%;
+  --danger: 0 80% 64%;
+
+  --neu-light: 20 14% 22%;
+  --neu-dark: 20 28% 7%;
+
+  --mesh-1: 22 85% 44%;
+  --mesh-2: 344 70% 44%;
+  --mesh-3: 8 80% 42%;
+  --mesh-4: 36 80% 42%;
+
+  --font-ui: var(--font-dmsans), "Inter", system-ui, sans-serif;
+  --font-display: var(--font-grotesk), var(--font-dmsans), system-ui, sans-serif;
+  --font-reading: "Merriweather", Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 1.1rem;
+}
+
+/* --------------------------------------------------------------------------
+   8. THEME: GRAPHITE — slate instrument, electric-blue accent, tighter radii
+      (the "redesign": sharper, more machined than the soft presets)
+   -------------------------------------------------------------------------- */
+[data-theme="graphite"] {
+  color-scheme: dark;
+  --background: 220 12% 16%;
+  --surface: 220 12% 17%;
+  --foreground: 220 16% 91%;
+  --muted: 220 8% 58%;
+  --border: 220 10% 27%;
+
+  --primary: 210 100% 60%;
+  --primary-foreground: 220 30% 8%;
+  --secondary: 190 90% 52%;
+  --accent: 210 100% 60%;
+  --ring: 210 100% 60%;
+  --success: 150 55% 50%;
+  --warning: 40 92% 56%;
+  --danger: 0 80% 63%;
+
+  --neu-light: 220 12% 25%;
+  --neu-dark: 220 24% 8%;
+  --neu-dist: 5px;
+  --neu-blur: 12px;
+
+  --mesh-1: 210 80% 38%;
+  --mesh-2: 190 70% 36%;
+  --mesh-3: 220 30% 32%;
+  --mesh-4: 230 50% 34%;
+
+  --font-ui: var(--font-grotesk), system-ui, sans-serif;
+  --font-display: var(--font-grotesk), system-ui, sans-serif;
+  --font-reading: var(--font-grotesk), Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 0.8rem;
+}
+
+/* --------------------------------------------------------------------------
+   9. THEME: CHALKBOARD — matte slate classroom board, chalk-white text,
+      chalk-yellow + cyan accents (academic counterpart to Metal's instrument).
+   -------------------------------------------------------------------------- */
+[data-theme="chalkboard"] {
+  color-scheme: dark;
+  --background: 156 16% 16%;
+  --surface: 156 15% 17%;
+  --foreground: 45 30% 90%;
+  --muted: 150 8% 62%;
+  --border: 156 12% 26%;
+
+  --primary: 47 88% 68%;
+  --primary-foreground: 156 30% 10%;
+  --secondary: 180 55% 68%;
+  --accent: 47 88% 68%;
+  --ring: 47 88% 68%;
+  --success: 140 52% 60%;
+  --warning: 38 90% 64%;
+  --danger: 6 76% 64%;
+
+  --neu-light: 156 14% 23%;
+  --neu-dark: 156 30% 8%;
+  --neu-dist: 5px;
+  --neu-blur: 11px;
+
+  --mesh-1: 156 28% 24%;
+  --mesh-2: 180 26% 24%;
+  --mesh-3: 140 26% 22%;
+  --mesh-4: 200 24% 24%;
+
+  --font-ui: var(--font-dmsans), "Inter", system-ui, sans-serif;
+  --font-display: "Merriweather", Georgia, serif;
+  --font-reading: "Merriweather", Georgia, serif;
+  --font-code: var(--font-jbmono), ui-monospace, monospace;
+  --radius: 0.7rem;
 }
 
 /* Honour reduced-motion (accessibility). */
@@ -626,6 +772,29 @@
   letter-spacing: 0.05em;
 }
 
+/* --------------------------------------------------------------------------
+   CHALKBOARD theme — matte board surfaces with faint chalk dust + chalk-written
+   headings (soft white bloom instead of an engraved emboss).
+   -------------------------------------------------------------------------- */
+[data-theme="chalkboard"] .neu,
+[data-theme="chalkboard"] .glass,
+[data-theme="chalkboard"] .neu-btn,
+[data-theme="chalkboard"] .neu-lg {
+  background-image:
+    radial-gradient(130% 120% at 50% -10%, hsl(45 30% 90% / 0.05), transparent 55%),
+    repeating-radial-gradient(circle at 30% 20%, hsl(45 30% 90% / 0.018) 0 1px, transparent 1px 4px);
+}
+[data-theme="chalkboard"] h1,
+[data-theme="chalkboard"] h2,
+[data-theme="chalkboard"] h3,
+[data-theme="chalkboard"] .display-1,
+[data-theme="chalkboard"] .display-2,
+[data-theme="chalkboard"] .display-3 {
+  text-shadow:
+    0 0 1px hsl(45 32% 92% / 0.5),
+    0 0 7px hsl(45 32% 92% / 0.14);
+}
+
 /* Hide scrollbars (used by the iOS-style time wheel and card stacks) */
 .no-scrollbar {
   -ms-overflow-style: none;
@@ -633,4 +802,78 @@
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* --------------------------------------------------------------------------
+   10. Engraved display headings — the carved-into-the-surface look the Metal
+       theme had, now applied in EVERY theme for a consistent tactile headline.
+       Solid headings use text-shadow; gradient-clipped headings use a
+       drop-shadow filter (text-shadow can't render on transparent glyphs).
+   -------------------------------------------------------------------------- */
+.display-1,
+.display-2,
+.display-3 {
+  text-shadow:
+    0 1px 0 hsl(var(--neu-light) / 0.7),
+    0 -1px 1px hsl(var(--neu-dark) / 0.25);
+}
+.text-gradient {
+  filter: drop-shadow(0 1px 0.4px hsl(var(--neu-light) / 0.55));
+}
+/* gradient text is transparent, so its own text-shadow would ghost — kill it */
+.text-gradient {
+  text-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   11. Skeuomorphic radial gauge ("data circles"): a carved channel, a glowing
+       accent fill that sweeps on, and a raised convex center cap. The fill is
+       animatable because --dial-p is a registered <number> custom property.
+   -------------------------------------------------------------------------- */
+@property --dial-p {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
+.dial {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background-color: hsl(var(--surface));
+  box-shadow: var(--neu-inset); /* carved channel the fill sits inside */
+}
+.dial__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  --dial-accent: hsl(var(--primary));
+  background: conic-gradient(
+    from -90deg,
+    var(--dial-accent) calc(var(--dial-p) * 1%),
+    transparent calc(var(--dial-p) * 1%)
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    #0000 calc(100% - var(--dial-stroke, 12px)),
+    #000 calc(100% - var(--dial-stroke, 12px) + 0.5px)
+  );
+  mask: radial-gradient(
+    farthest-side,
+    #0000 calc(100% - var(--dial-stroke, 12px)),
+    #000 calc(100% - var(--dial-stroke, 12px) + 0.5px)
+  );
+  filter: drop-shadow(0 0 7px var(--dial-accent));
+  transition: --dial-p 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.dial__cap {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background-color: hsl(var(--surface));
+  background-image: var(--neu-convex);
+  box-shadow: var(--neu-raise);
 }

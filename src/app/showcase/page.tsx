@@ -84,11 +84,14 @@ export default function SoftUIShowcase() {
               onClick={() => setStudying((v) => !v)}
               className={cn(
                 "neu-inset relative h-9 w-16 rounded-full transition-all duration-300",
-                studying && "bg-[hsl(var(--primary)/0.22)]",
+                studying && "bg-[hsl(var(--primary)/0.32)]",
               )}
               style={
                 studying
-                  ? { boxShadow: "var(--neu-inset), inset 0 0 14px hsl(var(--primary) / 0.65)" }
+                  ? {
+                      boxShadow:
+                        "var(--neu-inset), inset 0 0 18px hsl(var(--primary) / 0.95), 0 0 16px hsl(var(--primary) / 0.5)",
+                    }
                   : undefined
               }
             >

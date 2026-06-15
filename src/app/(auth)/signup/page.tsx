@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserPlus } from "lucide-react";
 import { signup } from "../actions";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { Logo } from "@/components/brand/Logo";
@@ -70,9 +71,9 @@ export default async function SignupPage({
         </div>
         <button
           type="submit"
-          className="pressable w-full rounded-xl bg-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
+          className="neu-btn flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-primary"
         >
-          Create account
+          <UserPlus className="h-4 w-4" /> Create account
         </button>
       </form>
 

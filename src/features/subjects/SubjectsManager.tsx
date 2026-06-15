@@ -105,7 +105,7 @@ export function SubjectsManager() {
     <FadeIn className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Subjects</h1>
+          <h1 className="display-3">Subjects</h1>
           <p className="mt-1 text-sm text-muted">Your courses, professors, and current grades.</p>
         </div>
         <button

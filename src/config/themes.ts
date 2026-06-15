@@ -1,4 +1,13 @@
-export type ThemeId = "nexus" | "soft" | "soft-dark" | "cyber" | "metal";
+export type ThemeId =
+  | "nexus"
+  | "soft"
+  | "soft-dark"
+  | "cyber"
+  | "metal"
+  | "aurora"
+  | "sunset"
+  | "graphite"
+  | "chalkboard";
 
 export interface ThemePreset {
   id: ThemeId;
@@ -38,6 +47,30 @@ export const THEMES: ThemePreset[] = [
     label: "Metal",
     description: "Brushed-aluminium instrument",
     swatch: ["#ff5a00", "#3a3f47", "#cfd2d6"],
+  },
+  {
+    id: "aurora",
+    label: "Aurora",
+    description: "Violet + cyan light relief",
+    swatch: ["#7c3aed", "#16b6d8", "#e6e2f2"],
+  },
+  {
+    id: "sunset",
+    label: "Sunset",
+    description: "Warm amber + rose dark relief",
+    swatch: ["#f2780c", "#ec4567", "#272018"],
+  },
+  {
+    id: "graphite",
+    label: "Graphite",
+    description: "Slate instrument, electric blue",
+    swatch: ["#33aaff", "#15c5e0", "#262a30"],
+  },
+  {
+    id: "chalkboard",
+    label: "Chalkboard",
+    description: "Matte slate board, chalk accents",
+    swatch: ["#f0d264", "#86dede", "#25322d"],
   },
 ];
 

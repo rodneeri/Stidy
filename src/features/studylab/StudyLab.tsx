@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Sparkles, Loader2, Layers, FileText, Pencil, Check, Flame } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Sparkles, Loader2, Layers, FileText, Pencil, Check, Flame, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Flashcard } from "@/types/db";
 import { Modal } from "@/components/ui/Modal";
@@ -272,7 +273,7 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Study Lab</h1>
+          <h1 className="display-3">Study <span className="text-gradient">Lab</span></h1>
           <p className="mt-1 text-sm text-muted">
             Generate flashcards and exams from a subject — tuned to difficulty and your prompt.
           </p>
@@ -522,42 +523,78 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
         title={openExam ? `${examName(openExam)} · ${openExam.difficulty}` : "Exam"}
       >
         {openExam && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs text-muted">
-              <FileText className="h-3.5 w-3.5 text-primary" />
-              {openExam.questions.length} questions
+          <div className="space-y-4">
+            <div className="flex items-center justify-between text-xs text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <FileText className="h-3.5 w-3.5 text-primary" />
+                {openExam.questions.length} questions
+              </span>
+              {openExam.questions.some((q) => q.points != null) && (
+                <span className="neu-inset rounded-full px-2.5 py-1 font-medium" data-numeric>
+                  {openExam.questions.reduce((a, q) => a + (q.points ?? 0), 0)} pts total
+                </span>
+              )}
             </div>
-            <ol className="max-h-[60vh] space-y-3 overflow-y-auto pr-1">
+            <ol className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
               {openExam.questions.map((q, i) => {
                 const isOpen = revealed.has(i);
                 return (
-                  <li key={i} className="neu-inset rounded-xl p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-base font-bold leading-snug">
-                        {i + 1}. <MathText>{q.question}</MathText>
-                        {q.points != null && (
-                          <span className="ml-2 text-xs font-normal text-muted">({q.points} pts)</span>
-                        )}
-                      </p>
-                      <button
-                        onClick={() =>
-                          setRevealed((s) => {
-                            const n = new Set(s);
-                            if (n.has(i)) n.delete(i);
-                            else n.add(i);
-                            return n;
-                          })
-                        }
-                        className="pressable shrink-0 rounded-lg px-2 py-1 text-xs text-primary"
+                  <li key={i} className="neu rounded-2xl p-5">
+                    <div className="flex items-start gap-3.5">
+                      <span
+                        className="neu-inset grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-semibold text-primary"
+                        data-numeric
+                        style={{ fontFamily: "var(--font-display)" }}
                       >
-                        {isOpen ? "Hide" : "Show answer"}
-                      </button>
-                    </div>
-                    {isOpen && (
-                      <div className="mt-2 whitespace-pre-wrap border-t border-border/60 pt-2 text-sm font-normal text-foreground/90">
-                        <MathText>{q.answer}</MathText>
+                        {i + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base font-semibold leading-snug">
+                          <MathText>{q.question}</MathText>
+                        </p>
+                        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                          {q.points != null && (
+                            <span className="neu-inset rounded-full px-2.5 py-0.5 text-[11px] font-medium text-muted" data-numeric>
+                              {q.points} pts
+                            </span>
+                          )}
+                          <button
+                            onClick={() =>
+                              setRevealed((s) => {
+                                const n = new Set(s);
+                                if (n.has(i)) n.delete(i);
+                                else n.add(i);
+                                return n;
+                              })
+                            }
+                            className="pressable inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-primary"
+                          >
+                            {isOpen ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                            {isOpen ? "Hide solution" : "Show solution"}
+                          </button>
+                        </div>
+                        <AnimatePresence initial={false}>
+                          {isOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                              className="overflow-hidden"
+                            >
+                              <div className="mt-3 rounded-xl border-l-2 border-primary/60 bg-primary/5 px-4 py-3">
+                                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/80">
+                                  Worked solution
+                                </p>
+                                <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                                  <MathText>{q.answer}</MathText>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
-                    )}
+                    </div>
                   </li>
                 );
               })}

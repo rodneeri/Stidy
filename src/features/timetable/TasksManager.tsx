@@ -276,7 +276,7 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
     <FadeIn className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Timetable</h1>
+          <h1 className="display-3">Timetable</h1>
           <p className="mt-1 text-sm text-muted">
             Tasks &amp; exams — these power your dashboard&apos;s next exam and what&apos;s next.
           </p>

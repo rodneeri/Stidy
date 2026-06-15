@@ -238,7 +238,7 @@ function SubjectDials({ d, scale }: { d: DashData; scale: GradeScale }) {
                 <Dial
                   value={g ?? 0}
                   size={96}
-                  color={DIAL_COLORS[i % 3]}
+                  accent={DIAL_COLORS[i % 3]}
                   center={
                     <span className="text-lg font-semibold tabular-nums">
                       {formatGrade(g, scale, { suffix: false, decimals: scale === "percent" ? 0 : 1 })}

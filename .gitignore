@@ -1,7 +1,5 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
+# ---- dependencies / build ----
+node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -9,33 +7,34 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-
-# testing
 /coverage
-
-# next.js
 /.next/
 /out/
-
-# production
 /build
+*.tsbuildinfo
+next-env.d.ts
 
-# misc
+# ---- env / secrets ----
+.env*
+.vercel
+
+# ---- os / editor ----
 .DS_Store
 *.pem
-
-# debug
+*.bak
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# ---- NOT part of the app (this folder also holds local tooling / a vault mirror
+#      and a deprecated duplicate app copy — keep them out of the repo) ----
+.claude/
+.impeccable/
+second-brain/
+wiki/
+files/
+SpotifyYT/
+/stidy/
+*.webp
+CLAUDE.md.bak

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { motion, useInView } from "framer-motion";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useInView } from "framer-motion";
+import { cn } from "@/lib/utils";
 
-/** Count an integer up from 0 once it scrolls into view (easeOutCubic). */
+/** Count a number up from 0 once it scrolls into view (easeOutCubic). */
 export function CountUp({
   to,
-  duration = 1.1,
+  duration = 1.2,
   decimals = 0,
 }: {
   to: number;
@@ -36,15 +37,16 @@ export function CountUp({
 }
 
 /**
- * Animated radial progress dial. The accent arc draws on (with a soft glow) and
- * an optional centered label counts up the first time it enters the viewport.
- * One source of truth for every ring in the app — dashboard, grades, showcase.
+ * Skeuomorphic radial gauge. A carved channel holds a glowing accent fill that
+ * sweeps on (CSS-interpolated via the registered --dial-p), with a raised
+ * convex cap in the middle. The arc + the optional count-up fire the first
+ * time the dial scrolls into view.
  */
 export function Dial({
   value,
   size = 120,
-  stroke = 10,
-  color = "hsl(var(--primary))",
+  stroke = 12,
+  accent,
   center,
   className,
 }: {
@@ -52,48 +54,29 @@ export function Dial({
   value: number;
   size?: number;
   stroke?: number;
-  color?: string;
-  /** Centered content; defaults to the value counting up to `value%`. */
+  /** Override the accent fill/glow colour (any CSS color). Defaults to primary. */
+  accent?: string;
   center?: ReactNode;
   className?: string;
 }) {
-  const ref = useRef<SVGSVGElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { once: true, margin: "-10% 0px" });
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(value, 100));
+  const cap = size - stroke * 2 - 8;
 
   return (
-    <div
-      className={className}
-      style={{ position: "relative", width: size, height: size, display: "grid", placeItems: "center" }}
-    >
-      <svg ref={ref} width={size} height={size} className="-rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke="hsl(var(--neu-dark))"
-          strokeWidth={stroke}
-          opacity={0.5}
-        />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={inView ? { strokeDashoffset: circ - (pct / 100) * circ } : {}}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-          style={{ filter: `drop-shadow(0 0 6px ${color})` }}
-        />
-      </svg>
-      <div className="absolute grid place-items-center text-center">
+    <div ref={ref} className={cn("dial", className)} style={{ width: size, height: size }}>
+      <div
+        className="dial__fill"
+        style={
+          {
+            "--dial-stroke": `${stroke}px`,
+            "--dial-p": inView ? pct : 0,
+            ...(accent ? { "--dial-accent": accent } : {}),
+          } as CSSProperties
+        }
+      />
+      <div className="dial__cap" style={{ width: cap, height: cap }}>
         {center ?? (
           <span
             className="text-2xl font-semibold"

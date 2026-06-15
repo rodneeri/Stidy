@@ -33,12 +33,9 @@ export function Sidebar() {
               {active && (
                 <motion.span
                   layoutId="nav-active"
-                  className="neu absolute inset-0 rounded-xl shadow-[0_0_20px_-6px_hsl(var(--primary)/0.55)]"
+                  className="neu absolute inset-0 rounded-xl"
                   transition={spring.slide}
-                >
-                  {/* accent rail on the active item */}
-                  <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-primary" />
-                </motion.span>
+                />
               )}
               <Icon
                 className={cn(

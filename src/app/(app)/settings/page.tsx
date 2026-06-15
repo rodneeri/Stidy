@@ -11,7 +11,7 @@ export default function SettingsPage() {
   return (
     <FadeIn className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+        <h1 className="display-3">Settings</h1>
         <p className="mt-1 text-muted">Tune STiDY to match how you work.</p>
       </header>
 
