@@ -173,6 +173,7 @@ export function FocusTimer() {
   const [secondsLeft, setSecondsLeft] = useState(PRESETS[0].focus * 60);
   const [running, setRunning] = useState(false);
   const [sessions, setSessions] = useState(0);
+  const [phaseId, setPhaseId] = useState(0); // bumps on each new phase so the timer re-arms
 
   const [todaySec, setTodaySec] = useState(0);
   const [weekSec, setWeekSec] = useState(0);
@@ -188,6 +189,9 @@ export function FocusTimer() {
 
   const total = (mode === "focus" ? preset.focus : preset.brk) * 60;
   const audioRef = useRef<{ ctx: AudioContext; src: AudioBufferSourceNode; gain: GainNode } | null>(null);
+  const endAtRef = useRef<number | null>(null); // target end timestamp (ms) while running
+  const secLeftRef = useRef(secondsLeft);
+  secLeftRef.current = secondsLeft;
 
   const loadStats = useCallback(async () => {
     const startToday = new Date();
@@ -234,12 +238,30 @@ export function FocusTimer() {
     [supabase, userId, subjectId, loadStats],
   );
 
-  // countdown tick
+  // countdown — driven by a target timestamp, not by counting ticks, so it stays
+  // accurate when the tab is backgrounded (browsers throttle setInterval there)
+  // and the session still completes/logs when you return. Re-syncs on focus/visibility.
   useEffect(() => {
-    if (!running) return;
-    const id = setInterval(() => setSecondsLeft((s) => s - 1), 1000);
-    return () => clearInterval(id);
-  }, [running]);
+    if (!running) {
+      endAtRef.current = null;
+      return;
+    }
+    endAtRef.current = Date.now() + secLeftRef.current * 1000;
+    const tick = () => {
+      if (endAtRef.current != null) setSecondsLeft(Math.round((endAtRef.current - Date.now()) / 1000));
+    };
+    const id = setInterval(tick, 1000);
+    const onVisible = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [running, phaseId]);
 
   // phase completion (+ alarm)
   useEffect(() => {
@@ -254,6 +276,7 @@ export function FocusTimer() {
       setMode("focus");
       setSecondsLeft(preset.focus * 60);
     }
+    setPhaseId((p) => p + 1); // re-arm the timestamp timer for the new phase
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secondsLeft]);
 
@@ -276,6 +299,7 @@ export function FocusTimer() {
     if (mode === "focus") logStudy(preset.focus * 60 - secondsLeft);
     setMode((m) => (m === "focus" ? "break" : "focus"));
     setSecondsLeft((mode === "focus" ? preset.brk : preset.focus) * 60);
+    setPhaseId((p) => p + 1);
   }
   function choosePreset(p: Preset) {
     setPreset(p);
