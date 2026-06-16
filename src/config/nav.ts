@@ -6,6 +6,7 @@ import {
   CalendarDays,
   FlaskConical,
   Timer,
+  Users,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -24,5 +25,6 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/timetable", label: "Timetable", icon: CalendarDays },
   { href: "/flashcards", label: "Study Lab", icon: FlaskConical },
   { href: "/focus", label: "Focus", icon: Timer },
+  { href: "/coworking", label: "Coworking", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

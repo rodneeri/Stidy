@@ -144,3 +144,35 @@ export interface Grade {
   is_projected: boolean;
   graded_at: string | null;
 }
+
+// ── Coworking / Collaboration Hub ───────────────────────────────────────────
+export type CoworkTimerPhase = "idle" | "focus" | "break";
+
+export interface CoworkRoom {
+  id: string;
+  owner_id: string;
+  name: string;
+  join_code: string;
+  is_private: boolean;
+  timer_phase: CoworkTimerPhase;
+  timer_started_at: string | null;
+  timer_duration_secs: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoworkMember {
+  id: string;
+  room_id: string;
+  user_id: string;
+  joined_at: string;
+}
+
+export interface CoworkMessage {
+  id: string;
+  room_id: string;
+  user_id: string;
+  author_name: string;
+  body: string;
+  created_at: string;
+}
