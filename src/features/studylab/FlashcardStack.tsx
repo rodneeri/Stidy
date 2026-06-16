@@ -6,6 +6,7 @@ import { X, Shuffle, Pencil, ArrowLeft, Layers, RotateCw, Check } from "lucide-r
 import { MathText } from "@/components/ui/MathText";
 import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Portal } from "@/components/ui/Portal";
+import { ErrorBoundary } from "@/components/shared/ErrorBoundary";
 import type { Flashcard } from "@/types/db";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +17,12 @@ function shuffleArr<T>(a: T[]): T[] {
     [r[i], r[j]] = [r[j], r[i]];
   }
   return r;
+}
+
+/** Drop duplicate ids — duplicate keys can crash AnimatePresence mid-study. */
+function uniqById(cards: Flashcard[]): Flashcard[] {
+  const seen = new Set<string>();
+  return cards.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
 }
 
 interface Props {
@@ -33,7 +40,7 @@ export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll }: Props
   const [editing, setEditing] = useState(false);
 
   const launch = () => {
-    setOrder(shuffleArr(cards));
+    setOrder(shuffleArr(uniqById(cards)));
     setFlipped(false);
     setEditing(false);
     setPhase("shuffle");
@@ -128,6 +135,13 @@ export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll }: Props
                 </button>
               </div>
 
+              <ErrorBoundary
+                fallback={
+                  <p className="py-10 text-center text-sm text-muted">
+                    This deck hit a snag rendering. Close and reopen, or reshuffle.
+                  </p>
+                }
+              >
               {editing ? (
                 <EditList cards={cards} onUpdate={onUpdate} onDelete={onDelete} />
               ) : phase === "shuffle" ? (
@@ -187,6 +201,7 @@ export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll }: Props
                   <p className="text-xs text-muted">Tap the card to flip · Next sends it to the back</p>
                 </div>
               ) : null}
+              </ErrorBoundary>
             </motion.div>
           </motion.div>
         )}

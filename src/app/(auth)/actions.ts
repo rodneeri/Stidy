@@ -42,10 +42,16 @@ export async function signup(formData: FormData) {
   if (!parsed.success) err("/signup", parsed.error.issues[0].message);
 
   const supabase = await createClient();
+  // Point the confirmation email at production (or NEXT_PUBLIC_SITE_URL),
+  // not localhost. Must also be in Supabase → Auth → URL Configuration.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://stidy-silk.vercel.app";
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: { data: { full_name: parsed.data.fullName } },
+    options: {
+      data: { full_name: parsed.data.fullName },
+      emailRedirectTo: `${siteUrl}/auth/callback`,
+    },
   });
   if (error) err("/signup", error.message);
 
