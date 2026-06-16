@@ -929,3 +929,32 @@
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* --------------------------------------------------------------------------
+   14. Calm "color breathing" for live accents — the focus-timer ring and the
+       range-slider fills gently pulse so running states feel alive, not static.
+       Reduced-motion users get the static look (no-preference guard).
+   -------------------------------------------------------------------------- */
+@keyframes breathe-soft {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.74; }
+}
+@keyframes breathe-accent {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50%      { filter: brightness(1.16) saturate(1.12); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Soft pulse of the focus-timer accent ring (its glow lives in an inline
+     filter, so we breathe opacity here to avoid clobbering it). */
+  .breathe-soft {
+    animation: breathe-soft 4.8s ease-in-out infinite;
+    will-change: opacity;
+  }
+  /* Slider fills breathe their color brightness as you'd expect of a live control. */
+  .neu-range::-webkit-slider-runnable-track {
+    animation: breathe-accent 6s ease-in-out infinite;
+  }
+  .neu-range::-moz-range-progress {
+    animation: breathe-accent 6s ease-in-out infinite;
+  }
+}

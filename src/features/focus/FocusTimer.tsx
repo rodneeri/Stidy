@@ -439,7 +439,10 @@ export function FocusTimer() {
 
               <div className="dial h-56 w-56">
                 <div
-                  className="pointer-events-none absolute inset-0 rounded-full"
+                  className={cn(
+                    "pointer-events-none absolute inset-0 rounded-full",
+                    running && !editingCustom && "breathe-soft",
+                  )}
                   style={{
                     background: `conic-gradient(from -90deg, ${
                       mode === "focus" ? "hsl(var(--primary))" : "hsl(var(--secondary))"
