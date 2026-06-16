@@ -2,7 +2,7 @@
 
 /**
  * Tiny event bus so anywhere in the app (e.g. the top-bar search) can hand a
- * query to the Virtual Studify assistant — opening it and sending the message —
+ * query to the STiDY assistant — opening it and sending the message —
  * without prop-drilling or a global store. SSR-safe (no-ops without `window`).
  */
 const EVENT = "stidy-ask-assistant";

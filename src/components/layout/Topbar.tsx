@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Bell, LogOut, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Search, LogOut, Sparkles, Command } from "lucide-react";
 import { ThemePicker } from "@/components/theme/ThemePicker";
+import { NotificationsBell } from "@/components/layout/NotificationsBell";
+import { openCommandPalette } from "@/components/layout/CommandPalette";
 import { askAssistant } from "@/features/assistant/assistant-bus";
 import { signOut } from "@/app/(auth)/actions";
 
@@ -14,11 +16,27 @@ interface TopbarProps {
 export function Topbar({ displayName, email }: TopbarProps) {
   const initial = (displayName || email || "S").charAt(0).toUpperCase();
   const [q, setQ] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // "/" focuses the search (unless you're already typing somewhere).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = document.activeElement as HTMLElement | null;
+      const typing =
+        el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+      if (typing) return;
+      e.preventDefault();
+      inputRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const ask = () => {
     const query = q.trim();
     if (!query) return;
-    askAssistant(query); // opens the Virtual Studify assistant + sends this query
+    askAssistant(query); // opens the STiDY assistant + sends this query
     setQ("");
   };
 
@@ -34,15 +52,21 @@ export function Topbar({ displayName, email }: TopbarProps) {
       >
         <Search className="h-4 w-4 shrink-0 text-muted" />
         <input
+          ref={inputRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Ask Studify, or search your semester…"
+          placeholder="Ask STiDY, or search your semester…"
           className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
-          aria-label="Ask the Studify assistant"
+          aria-label="Ask the STiDY assistant"
         />
+        {!q && (
+          <kbd className="hidden rounded-md px-1.5 py-0.5 text-[10px] text-muted ring-1 ring-border md:block">
+            /
+          </kbd>
+        )}
         <button
           type="submit"
-          aria-label="Ask Studify"
+          aria-label="Ask STiDY"
           className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-full text-primary disabled:opacity-40"
           disabled={!q.trim()}
         >
@@ -51,14 +75,19 @@ export function Topbar({ displayName, email }: TopbarProps) {
       </form>
 
       <div className="ml-auto flex items-center gap-2.5">
-        <ThemePicker />
         <button
           type="button"
-          aria-label="Notifications"
-          className="neu-btn grid h-9 w-9 place-items-center rounded-full"
+          aria-label="Open command palette"
+          title="Command palette (⌘K)"
+          onClick={() => openCommandPalette()}
+          className="neu-btn hidden h-9 items-center gap-1.5 rounded-full px-3 text-xs text-muted sm:flex"
         >
-          <Bell className="h-4 w-4" />
+          <Command className="h-3.5 w-3.5" />
+          <span className="font-medium">K</span>
         </button>
+
+        <ThemePicker />
+        <NotificationsBell />
 
         <div className="group relative">
           <span
