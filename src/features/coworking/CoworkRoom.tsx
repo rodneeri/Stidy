@@ -5,6 +5,8 @@ import { ArrowLeft, Copy, Check, Send, Play, Coffee, Square, Trash2, LogOut, Use
 import { createClient } from "@/lib/supabase/client";
 import type { CoworkRoom as Room, CoworkMessage } from "@/types/db";
 import { cn } from "@/lib/utils";
+import { useErrorStore } from "@/stores/error-store";
+import { AppError } from "@/lib/errors";
 
 interface Props {
   roomId: string;
@@ -77,7 +79,12 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "cowork_messages", filter: `room_id=eq.${roomId}` },
-        (payload) => setMessages((prev) => [...prev, payload.new as CoworkMessage]),
+        (payload) =>
+          setMessages((prev) => {
+            const m = payload.new as CoworkMessage;
+            // De-dupe: the sender may have already added this optimistically.
+            return prev.some((x) => x.id === m.id) ? prev : [...prev, m];
+          }),
       )
       .on(
         "postgres_changes",
@@ -86,6 +93,17 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
       )
       .subscribe((status) => {
         if (status === "SUBSCRIBED") channel.track({ user_id: userId, name: displayName });
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          useErrorStore.getState().report(
+            new AppError({
+              title: "Live sync unavailable",
+              source: "Coworking · realtime",
+              systemMessage: `Realtime channel status: ${status}`,
+              hint: "Chat and presence won't update live. The coworking tables may not be in the Supabase realtime publication — re-run supabase/migrations/2026-06-16_coworking.sql, then reload.",
+            }),
+            "Coworking · realtime",
+          );
+        }
       });
     return () => {
       supabase.removeChannel(channel);
@@ -121,9 +139,33 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
     const body = draft.trim();
     if (!body) return;
     setDraft("");
-    await supabase
+    const { data, error } = await supabase
       .from("cowork_messages")
-      .insert({ room_id: roomId, user_id: userId, author_name: displayName, body });
+      .insert({ room_id: roomId, user_id: userId, author_name: displayName, body })
+      .select()
+      .single();
+    if (error) {
+      setDraft(body); // don't lose what they typed
+      useErrorStore.getState().report(
+        new AppError({
+          title: "Message not sent",
+          source: "Coworking · chat",
+          systemMessage: `${error.message}${error.details ? `\n${error.details}` : ""}${
+            error.hint ? `\n${error.hint}` : ""
+          } (code ${error.code ?? "?"})`,
+          hint: "If this mentions row-level security or membership, either you haven't joined this room or the coworking migration isn't fully applied. Re-run supabase/migrations/2026-06-16_coworking.sql.",
+        }),
+        "Coworking · chat",
+      );
+      return;
+    }
+    // Optimistic: show our own message immediately (realtime echo is de-duped).
+    if (data)
+      setMessages((prev) =>
+        prev.some((x) => x.id === (data as CoworkMessage).id)
+          ? prev
+          : [...prev, data as CoworkMessage],
+      );
   };
 
   const copyCode = async () => {
