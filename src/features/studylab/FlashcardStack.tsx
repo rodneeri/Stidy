@@ -95,7 +95,7 @@ export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll }: Props
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 grid place-items-center bg-background/70 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 grid place-items-center bg-background/85 p-4"
           >
             <motion.div
               initial={{ scale: 0.94, y: 16, opacity: 0 }}

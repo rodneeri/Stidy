@@ -3,10 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search, LogOut, Sparkles, Command, CornerDownLeft } from "lucide-react";
+import { Search, LogOut, Sparkles, CornerDownLeft } from "lucide-react";
 import { ThemePicker } from "@/components/theme/ThemePicker";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
-import { openCommandPalette } from "@/components/layout/CommandPalette";
 import { askAssistant } from "@/features/assistant/assistant-bus";
 import { NAV_ITEMS } from "@/config/nav";
 import { signOut } from "@/app/(auth)/actions";
@@ -171,17 +170,6 @@ export function Topbar({ displayName, email }: TopbarProps) {
       </div>
 
       <div className="ml-auto flex items-center gap-2.5">
-        <button
-          type="button"
-          aria-label="Open command palette"
-          title="Command palette (⌘K)"
-          onClick={() => openCommandPalette()}
-          className="neu-btn hidden h-9 items-center gap-1.5 rounded-full px-3 text-xs text-muted sm:flex"
-        >
-          <Command className="h-3.5 w-3.5" />
-          <span className="font-medium">K</span>
-        </button>
-
         <ThemePicker />
         <NotificationsBell />
 

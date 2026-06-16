@@ -165,9 +165,11 @@ export function SubjectsManager() {
           </span>
           <div className="min-w-0">
             <h3 className="truncate font-semibold">{s.name}</h3>
-            <p className="truncate text-xs text-muted">
-              {[s.code, s.professor].filter(Boolean).join(" · ") || "No details"}
-            </p>
+            {[s.code, s.professor].filter(Boolean).length > 0 && (
+              <p className="truncate text-xs text-muted">
+                {[s.code, s.professor].filter(Boolean).join(" · ")}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1">
