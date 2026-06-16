@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, GraduationCap, CalendarClock, CheckCircle2 } from "lucide-react";
 import { formatDistanceToNowStrict, isToday } from "date-fns";
@@ -16,39 +16,57 @@ interface Reminder {
   is_exam: boolean;
 }
 
-const WINDOW_DAYS = 7;
+const TASK_WINDOW_MS = 14 * 86_400_000; // tasks within 2 weeks; exams show however far out
 
 /** Topbar bell → upcoming exams & overdue/soon tasks pulled live from the timetable. */
 export function NotificationsBell() {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const supabase = useMemo(() => createClient(), []);
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const { data } = await supabase
-        .from("tasks")
-        .select("id,title,due_at,is_exam")
-        .neq("status", "done")
-        .neq("status", "archived")
-        .not("due_at", "is", null)
-        .order("due_at", { ascending: true });
-      if (!alive || !data) return;
-      const horizon = Date.now() + WINDOW_DAYS * 86_400_000;
-      setReminders(
-        (data as Reminder[]).filter((t) => t.due_at && new Date(t.due_at).getTime() <= horizon),
-      );
-    })();
-    return () => {
-      alive = false;
-    };
+  const load = useCallback(async () => {
+    const { data } = await supabase
+      .from("tasks")
+      .select("id,title,due_at,is_exam")
+      .neq("status", "done")
+      .neq("status", "archived")
+      .not("due_at", "is", null)
+      .order("due_at", { ascending: true });
+    if (!data) return;
+    const now = Date.now();
+    setReminders(
+      (data as Reminder[]).filter((t) => {
+        if (!t.due_at) return false;
+        const due = new Date(t.due_at).getTime();
+        if (due < now) return true; // overdue
+        if (t.is_exam) return true; // any upcoming exam, however far out
+        return due <= now + TASK_WINDOW_MS; // non-exam tasks within 2 weeks
+      }),
+    );
   }, [supabase]);
+
+  // Load on mount, on every route change, and whenever the tab regains focus —
+  // so newly added exams/tasks show up without a hard refresh.
+  useEffect(() => {
+    load();
+  }, [load, pathname]);
+
+  useEffect(() => {
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [load]);
 
   useEffect(() => {
     if (!open) return;
+    void load(); // refresh on open too
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
@@ -59,7 +77,7 @@ export function NotificationsBell() {
       document.removeEventListener("mousedown", onClick);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, load]);
 
   const count = reminders.length;
 
@@ -95,7 +113,7 @@ export function NotificationsBell() {
           >
             <div className="flex items-center justify-between px-3 py-2">
               <p className="text-sm font-semibold tracking-tight">Upcoming</p>
-              <span className="text-[11px] text-muted">next {WINDOW_DAYS} days</span>
+              <span className="text-[11px] text-muted">exams &amp; deadlines</span>
             </div>
 
             <div className="max-h-80 overflow-auto">
