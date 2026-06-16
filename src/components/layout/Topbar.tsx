@@ -3,12 +3,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search, LogOut, Sparkles, CornerDownLeft } from "lucide-react";
+import Link from "next/link";
+import {
+  Search,
+  LogOut,
+  Sparkles,
+  CornerDownLeft,
+  Settings as SettingsIcon,
+  ShieldCheck,
+} from "lucide-react";
 import { ThemePicker } from "@/components/theme/ThemePicker";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
 import { askAssistant } from "@/features/assistant/assistant-bus";
 import { NAV_ITEMS } from "@/config/nav";
 import { signOut } from "@/app/(auth)/actions";
+import { isAdminEmail } from "@/config/admin";
 import { spring } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -172,30 +181,105 @@ export function Topbar({ displayName, email }: TopbarProps) {
       <div className="ml-auto flex items-center gap-2.5">
         <ThemePicker />
         <NotificationsBell />
+        <ProfileMenu displayName={displayName} email={email} initial={initial} />
+      </div>
+    </header>
+  );
+}
 
-        <div className="group relative">
-          <span
-            className="grid h-10 w-10 cursor-default place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
-            title={email}
+/** Click-to-open account menu: identity header, admin badge, quick links, sign-out. */
+function ProfileMenu({
+  displayName,
+  email,
+  initial,
+}: {
+  displayName: string;
+  email: string;
+  initial: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const admin = isAdminEmail(email);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        title={email}
+        className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
+      >
+        {initial}
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            role="menu"
+            initial={{ opacity: 0, scale: 0.95, y: -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -8 }}
+            transition={spring.pop}
+            className="neu absolute right-0 top-12 z-40 min-w-56 overflow-hidden p-1.5"
           >
-            {initial}
-          </span>
-          <form
-            action={signOut}
-            className="absolute right-0 top-12 hidden min-w-44 group-hover:block"
-          >
-            <div className="neu overflow-hidden p-1.5">
-              <p className="truncate px-3 py-2 text-xs text-muted">{email}</p>
+            <div className="flex items-center gap-2 px-3 py-2">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-semibold text-primary-foreground">
+                {initial}
+              </span>
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 truncate text-sm font-semibold">
+                  {displayName}
+                  {admin && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                      <ShieldCheck className="h-3 w-3" /> Admin
+                    </span>
+                  )}
+                </p>
+                <p className="truncate text-xs text-muted">{email}</p>
+              </div>
+            </div>
+
+            <div className="my-1 h-px bg-border" />
+
+            <Link
+              href="/settings"
+              onClick={() => setOpen(false)}
+              role="menuitem"
+              className="pressable flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:text-primary"
+            >
+              <SettingsIcon className="h-4 w-4" /> Settings
+            </Link>
+
+            <div className="my-1 h-px bg-border" />
+
+            <form action={signOut}>
               <button
                 type="submit"
+                role="menuitem"
                 className="pressable flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:text-primary"
               >
                 <LogOut className="h-4 w-4" /> Sign out
               </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </header>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
