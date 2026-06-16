@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎓 STiDY
+<img src="docs/brand/hero.png" alt="STiDY — Your academic command center" width="100%" />
 
 ### Your academic operating system.
 
@@ -8,6 +8,7 @@
 intelligent, beautifully tactile command center — wrapped in a neumorphic design system,
 nine hand-sculpted themes, and an AI study assistant that actually knows your semester.
 
+[![Live demo](https://img.shields.io/badge/live_demo-stidy--silk.vercel.app-2dd4bf?labelColor=0b0f12&logo=vercel&logoColor=white)](https://stidy-silk.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-149eca?logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript)](https://www.typescriptlang.org)
@@ -29,6 +30,11 @@ final to pass?"* or *"what's due this week?"*.
 It ships **bilingual (EN + ES)** and is built for students in the Spanish academic system
 (EVAU, cuatrimestres, oposiciones) as much as anywhere else.
 
+<div align="center">
+  <img src="docs/screens/dashboard.png" alt="STiDY dashboard — your command center" width="92%" />
+  <br/><sub><em>The dashboard — a drag-and-drop command center: grade dials, next-exam countdown, weekly focus.</em></sub>
+</div>
+
 ## 🧩 Features
 
 | Surface | What it does |
@@ -43,11 +49,45 @@ It ships **bilingual (EN + ES)** and is built for students in the Spanish academ
 | **Ask STiDY** | A floating AI assistant that knows your subjects, grades, deadlines and materials — with a switchable model picker and an honest fallback indicator. |
 | **Settings** | Theme engine, grade-scale preference, and per-tool manuals. |
 
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screens/grade-engine.png" alt="Grade Intelligence Engine — weighted average, What-If, Target Solver" /></td>
+    <td width="50%"><img src="docs/screens/resources.png" alt="Resource Vault — drop files, AI auto-classifies by subject & type" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><em>Grade Engine — weighted average, What-If &amp; Target Solver.</em></sub></td>
+    <td align="center"><sub><em>Resource Vault — AI sorts uploads by subject &amp; type.</em></sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screens/subjects.png" alt="Subjects & Careers" /></td>
+    <td width="50%"><img src="docs/screens/timetable.png" alt="Timetable — tasks & exams" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><em>Subjects &amp; Careers — grouped by degree or oposición.</em></sub></td>
+    <td align="center"><sub><em>Timetable — tasks &amp; exams powering the dashboard.</em></sub></td>
+  </tr>
+</table>
+
 ## 🎨 Design system — "Soft UI", dialed to 11
 
 Every surface is **neumorphic** (Soft UI): one surface color sculpted with a dual
 light/dark shadow, a convex sheen, and an inner bevel. It's defined CSS-first in
 [`src/app/globals.css`](src/app/globals.css).
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/screens/dashboard.png" alt="Midnight Teal theme" /></td>
+    <td width="33%"><img src="docs/screens/theme-amber.png" alt="Warm Paper theme" /></td>
+    <td width="33%"><img src="docs/screens/theme-green.png" alt="Terminal Green theme" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><em>Midnight</em></sub></td>
+    <td align="center"><sub><em>Warm Paper</em></sub></td>
+    <td align="center"><sub><em>Chalkboard / Terminal</em></sub></td>
+  </tr>
+</table>
+
+<div align="center"><sub>Three of the nine — the entire surface re-skins live from the theme picker.</sub></div>
 
 - **9 hand-sculpted themes** — Nexus, Soft, Soft Dark, Cyber, Metal (brushed aluminium),
   Aurora, Sunset, Graphite, and **Chalkboard** (a matte classroom board). Each is a full
