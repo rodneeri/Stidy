@@ -958,3 +958,21 @@
     animation: breathe-accent 6s ease-in-out infinite;
   }
 }
+
+/* --------------------------------------------------------------------------
+   15. Calm "color breathing" for section-header text — each page's big title
+       (.display-2 / .display-3) and any element tagged .breathe-title gently
+       drifts from the foreground colour toward the accent and back. Subtle on
+       purpose: long 9s cycle, modest accent blend. Reduced-motion users opt out.
+   -------------------------------------------------------------------------- */
+@keyframes breathe-title {
+  0%, 100% { color: hsl(var(--foreground)); }
+  50% { color: color-mix(in srgb, hsl(var(--foreground)), hsl(var(--primary)) 40%); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .display-2,
+  .display-3,
+  .breathe-title {
+    animation: breathe-title 9s ease-in-out infinite;
+  }
+}

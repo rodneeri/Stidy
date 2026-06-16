@@ -102,7 +102,7 @@ export function CoworkingHub({ userId, displayName }: Props) {
   return (
     <FadeIn>
       <header className="mb-8">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <h1 className="breathe-title flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Users className="h-6 w-6 text-primary" /> Coworking
         </h1>
         <p className="mt-1 text-muted">Study together — live rooms, a shared focus timer, and chat.</p>
