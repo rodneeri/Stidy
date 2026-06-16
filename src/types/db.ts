@@ -17,6 +17,8 @@ export interface Subject {
   credits?: number | null;
   color: string | null;
   current_grade: number | null;
+  /** Archived (e.g. a finished term) — kept, hidden from the active view. */
+  archived?: boolean | null;
 }
 
 export type CareerKind = "degree" | "bachillerato" | "oposicion" | "other";
