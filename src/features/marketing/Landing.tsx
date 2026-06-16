@@ -83,7 +83,7 @@ export function Landing() {
       {/* Nav */}
       <header className="sticky top-0 z-30 px-5 py-3">
         <nav className="glass mx-auto flex max-w-5xl items-center gap-3 rounded-full px-4 py-2.5">
-          <Logo size={34} />
+          <Logo size={34} wordmark={false} />
           <span className={`text-lg font-bold tracking-tight ${grotesk}`}>STiDY</span>
           <div className="ml-auto flex items-center gap-2">
             <Link
@@ -301,7 +301,7 @@ export function Landing() {
       {/* Footer */}
       <footer className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-5 py-10 text-center">
         <div className="flex items-center gap-2">
-          <Logo size={26} />
+          <Logo size={26} wordmark={false} />
           <span className={`font-bold tracking-tight ${grotesk}`}>STiDY</span>
         </div>
         <p className="text-xs text-muted">Built with care for students · © {new Date().getFullYear()} STiDY</p>
