@@ -25,6 +25,7 @@ const ExamSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  try {
   const supabase = await createClient();
   const {
     data: { user },
@@ -70,7 +71,6 @@ export async function POST(req: Request) {
     (customPrompt ? `Extra instructions from the student: ${customPrompt}\n` : "") +
     `\nCourse materials for context:\n${materials}`;
 
-  try {
     if (type === "flashcards") {
       const object = await generateObjectAI({
         schema: FlashcardsSchema,

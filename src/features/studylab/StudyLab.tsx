@@ -15,6 +15,8 @@ import { FlashcardStack } from "./FlashcardStack";
 import { loadFcStats, recordReview, todayReviews, accuracy, streak, type FcStats } from "./flashcard-stats";
 import { useSubjectIcons } from "@/lib/subject-icons";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/apiFetch";
+import { useErrorStore } from "@/stores/error-store";
 
 const MODEL_OPTIONS = NVIDIA_MODELS.map((m) => ({ value: m.value, label: m.label }));
 
@@ -131,23 +133,27 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
     setGenerating(true);
     setError(null);
     try {
-      const res = await fetch("/api/study/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subjectId: selectedId,
-          type: opts.type,
-          difficulty: opts.difficulty,
-          count: opts.count,
-          customPrompt: opts.prompt,
-          model,
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        setError(json.error ?? "Generation failed");
-        return;
-      }
+      type GenResult = {
+        type: string;
+        cards?: { front: string; back: string }[];
+        questions?: ExamQ[];
+      };
+      const json = await apiFetch<GenResult>(
+        "/api/study/generate",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            subjectId: selectedId,
+            type: opts.type,
+            difficulty: opts.difficulty,
+            count: opts.count,
+            customPrompt: opts.prompt,
+            model,
+          }),
+        },
+        { title: "Couldn't generate your study set" },
+      );
       if (json.type === "flashcards") {
         const rows = (json.cards as { front: string; back: string }[]).map((c) => ({
           user_id: userId,
@@ -175,6 +181,7 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
       }
       setDialog(false);
     } catch (err) {
+      useErrorStore.getState().report(err, "Study Lab · generate");
       setError(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);

@@ -4,6 +4,7 @@ import { Space_Grotesk, DM_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { ErrorCenter } from "@/components/shared/ErrorCenter";
 import { DEFAULT_THEME, THEME_STORAGE_KEY } from "@/config/themes";
 
 // Display / headings / logo — distinctive tech-startup grotesk
@@ -46,6 +47,7 @@ export default function RootLayout({
           {themeBootScript}
         </Script>
         <ThemeProvider>{children}</ThemeProvider>
+        <ErrorCenter />
       </body>
     </html>
   );
