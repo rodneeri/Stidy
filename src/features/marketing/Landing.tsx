@@ -1,311 +1,296 @@
 "use client";
 
+import type { ComponentType } from "react";
+import Image, { type StaticImageData } from "next/image";
 import Link from "next/link";
-import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
 import {
-  GraduationCap,
-  FolderOpen,
-  CalendarDays,
-  FlaskConical,
-  Timer,
-  Users,
-  Sparkles,
-  Palette,
   ArrowRight,
+  BookOpen,
   Brain,
-  Zap,
-  ShieldCheck,
+  Check,
+  GraduationCap,
+  LogIn,
+  NotebookPen,
+  Sparkles,
+  Timer,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
-import { MeshBackground } from "@/components/layout/MeshBackground";
 
-const grotesk = "font-[family-name:var(--font-grotesk)]";
+import dashboardImage from "../../../docs/screens/dashboard.png";
+import gradeEngineImage from "../../../docs/screens/grade-engine.png";
+import resourcesImage from "../../../docs/screens/resources.png";
+import timetableImage from "../../../docs/screens/timetable.png";
 
-const FEATURES = [
+type Icon = ComponentType<{ className?: string }>;
+
+const modules: {
+  title: string;
+  description: string;
+  icon: Icon;
+}[] = [
   {
+    title: "Grade intelligence",
+    description: "Weighted averages, what-if sliders, and target scores that update as the term changes.",
     icon: GraduationCap,
-    title: "Grade Intelligence Engine",
-    body: "Weighted averages, What-If sliders, and a Target Solver that tells you exactly what you need on the final. Import a syllabus and AI builds the structure for you.",
-    span: "lg:col-span-2",
   },
   {
-    icon: Users,
-    title: "Coworking Hub",
-    body: "Live co-study rooms with presence, a shared focus timer, and chat. Study with classmates, in sync.",
-    span: "",
+    title: "Syllabus parsing",
+    description: "Turn course files into grading structures, deadlines, and study material with AI assistance.",
+    icon: NotebookPen,
   },
   {
-    icon: FolderOpen,
-    title: "Resource Vault",
-    body: "Drop your files — AI auto-classifies them by subject and type. In-app viewer included.",
-    span: "",
+    title: "Resource vault",
+    description: "Keep PDFs, notes, links, and class files attached to the subject where they belong.",
+    icon: BookOpen,
   },
   {
-    icon: FlaskConical,
-    title: "Study Lab",
-    body: "AI flashcards and practice exams grounded in your own materials, with spaced-repetition review.",
-    span: "",
-  },
-  {
+    title: "Focus sessions",
+    description: "Run deep-work blocks, review cards, and watch your next exam stay in view.",
     icon: Timer,
-    title: "Deep-Work Focus",
-    body: "Pomodoro + stopwatch, Web-Audio ambience, study logging, and a burnout nudge when you overdo it.",
-    span: "",
-  },
-  {
-    icon: CalendarDays,
-    title: "Timetable",
-    body: "Tasks and exams that power your dashboard's next-exam countdown and what's-next.",
-    span: "",
-  },
-  {
-    icon: Sparkles,
-    title: "Ask STiDY",
-    body: "An assistant that actually knows your semester — subjects, grades, deadlines, and resources.",
-    span: "lg:col-span-2",
   },
 ];
 
-const fadeUp = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0 },
-};
+const workflow = [
+  "Import syllabus",
+  "Track grades",
+  "Generate study sets",
+  "Plan the week",
+];
+
+const showcases: {
+  title: string;
+  copy: string;
+  image: StaticImageData;
+  alt: string;
+}[] = [
+  {
+    title: "Know what every assignment is worth",
+    copy: "The grade engine turns messy course weights into a working model, so students can decide where effort matters most.",
+    image: gradeEngineImage,
+    alt: "STiDY grade engine showing weighted course components and grade projections",
+  },
+  {
+    title: "Keep course material close to the work",
+    copy: "Resources sit beside the subjects, tasks, and exams they support instead of disappearing into a downloads folder.",
+    image: resourcesImage,
+    alt: "STiDY resource vault with organized academic files",
+  },
+  {
+    title: "Make the semester visible",
+    copy: "The timetable connects tasks, exam dates, and study sessions into one view students can actually scan.",
+    image: timetableImage,
+    alt: "STiDY timetable showing academic tasks and exam planning",
+  },
+];
 
 export function Landing() {
-  const reduce = useReducedMotion();
-  const { scrollYProgress } = useScroll();
-  const heroY = useTransform(scrollYProgress, [0, 0.2], [0, reduce ? 0 : -60]);
-
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
-      <MeshBackground />
-
-      {/* Nav */}
-      <header className="sticky top-0 z-30 px-5 py-3">
-        <nav className="glass mx-auto flex max-w-5xl items-center gap-3 rounded-full px-4 py-2.5">
-          <Logo size={34} wordmark={false} />
-          <span className={`text-lg font-bold tracking-tight ${grotesk}`}>STiDY</span>
-          <div className="ml-auto flex items-center gap-2">
+    <main data-theme="chalkboard" className="min-h-screen overflow-hidden bg-background text-foreground">
+      <section className="relative border-b border-foreground/10">
+        <div className="mesh-bg" />
+        <div className="relative mx-auto flex min-h-[88svh] w-full max-w-7xl flex-col px-5 py-6 sm:px-8 lg:px-10">
+          <nav className="flex items-center justify-between gap-4">
+            <Logo size={42} />
+            <div className="hidden items-center gap-7 text-sm font-medium text-muted md:flex">
+              <a className="transition hover:text-foreground" href="#modules">
+                Modules
+              </a>
+              <a className="transition hover:text-foreground" href="#workflow">
+                Workflow
+              </a>
+              <a className="transition hover:text-foreground" href="#screens">
+                Screens
+              </a>
+            </div>
             <Link
               href="/login"
-              className="pressable rounded-full px-4 py-2 text-sm font-medium text-muted hover:text-foreground"
+              className="neu-btn inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold"
             >
-              Log in
+              <LogIn className="h-4 w-4" />
+              Sign in
             </Link>
+          </nav>
+
+          <div className="grid flex-1 items-center gap-12 py-14 lg:grid-cols-[0.9fr_1.1fr] lg:py-10">
+            <div className="max-w-3xl">
+              <p className="eyebrow mb-5 inline-flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Personal academic OS
+              </p>
+              <h1 className="display-1 max-w-[10ch]">
+                STiDY keeps the whole semester in view.
+              </h1>
+              <p className="mt-6 max-w-[58ch] text-lg leading-8 text-muted">
+                Grades, syllabi, resources, flashcards, focus sessions, and AI help in one command
+                center built for university work.
+              </p>
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                <Link
+                  href="/dashboard"
+                  className="neu-btn inline-flex items-center justify-center gap-2 px-5 py-3 text-sm font-semibold text-primary"
+                >
+                  Open dashboard
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center justify-center gap-2 rounded-[var(--radius)] px-5 py-3 text-sm font-semibold text-foreground/85 transition hover:text-primary"
+                >
+                  Create account
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+              <dl className="mt-10 grid max-w-xl grid-cols-3 gap-4">
+                {[
+                  ["8.7", "grade model"],
+                  ["24m", "focus block"],
+                  ["17", "day streak"],
+                ].map(([value, label]) => (
+                  <div key={label} className="neu-inset px-4 py-3">
+                    <dt className="font-mono text-2xl font-semibold text-primary" data-numeric>
+                      {value}
+                    </dt>
+                    <dd className="mt-1 text-xs font-medium text-muted">{label}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -left-6 top-8 hidden w-28 -rotate-6 rounded-[var(--radius-md)] bg-primary/14 px-4 py-3 text-sm font-semibold text-primary shadow-[0_18px_55px_hsl(var(--primary)/0.16)] lg:block">
+                due next
+                <span className="mt-1 block font-mono text-2xl" data-numeric>
+                  09:30
+                </span>
+              </div>
+              <div className="neu-lg hairline relative overflow-hidden p-3">
+                <Image
+                  src={dashboardImage}
+                  alt="STiDY dashboard with grades, tasks, flashcards, and focus tools"
+                  priority
+                  placeholder="blur"
+                  sizes="(min-width: 1024px) 56vw, 100vw"
+                  className="aspect-[16/10] rounded-[calc(var(--radius)+0.05rem)] object-cover object-left-top"
+                />
+              </div>
+              <div className="neu absolute -bottom-6 right-4 hidden w-56 p-4 text-sm lg:block">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Brain className="h-4 w-4 text-primary" />
+                  Study set ready
+                </div>
+                <p className="mt-2 text-muted">42 flashcards from this week&apos;s resources.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="modules" className="border-b border-foreground/10 px-5 py-16 sm:px-8 lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-2xl">
+            <p className="eyebrow mb-3">Core modules</p>
+            <h2 className="display-2">A study system with fewer loose ends.</h2>
+          </div>
+          <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {modules.map((module) => {
+              const ModuleIcon = module.icon;
+
+              return (
+                <article key={module.title} className="neu lift hairline flex min-h-64 flex-col p-6">
+                  <ModuleIcon className="h-6 w-6 text-primary" />
+                  <h3 className="mt-8 text-2xl font-semibold tracking-[-0.02em]">
+                    {module.title}
+                  </h3>
+                  <p className="mt-4 leading-7 text-muted">{module.description}</p>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" className="border-b border-foreground/10 px-5 py-16 sm:px-8 lg:px-10">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.78fr_1fr] lg:items-start">
+          <div>
+            <p className="eyebrow mb-3">Workflow</p>
+            <h2 className="display-2">From course file to weekly plan.</h2>
+            <p className="mt-5 max-w-[54ch] text-lg leading-8 text-muted">
+              STiDY is built around the real loop of a semester: parse the course, understand the
+              grade, collect the material, then study before the deadline gets loud.
+            </p>
+          </div>
+          <ol className="grid gap-4 sm:grid-cols-2">
+            {workflow.map((step, index) => (
+              <li key={step} className="neu-inset flex items-center gap-4 p-5">
+                <span
+                  className="neu grid h-11 w-11 shrink-0 place-items-center font-mono text-sm font-semibold text-primary"
+                  data-numeric
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="text-lg font-semibold">{step}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section id="screens" className="px-5 py-16 sm:px-8 lg:px-10">
+        <div className="mx-auto max-w-7xl">
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div className="max-w-2xl">
+              <p className="eyebrow mb-3">Product views</p>
+              <h2 className="display-2">Made for the parts of studying people avoid.</h2>
+            </div>
             <Link
-              href="/signup"
-              className="neu-btn rounded-full px-4 py-2 text-sm font-semibold text-primary"
+              href="/dashboard"
+              className="neu-btn inline-flex w-fit items-center gap-2 px-5 py-3 text-sm font-semibold text-primary"
             >
-              Get started
+              Try the app
+              <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
-        </nav>
-      </header>
 
-      {/* Hero */}
-      <section className="relative mx-auto max-w-5xl px-5 pb-24 pt-16 text-center sm:pt-24">
-        <motion.div style={{ y: heroY }}>
-          <motion.span
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="neu inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-muted"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            The Personal Academic Operating System
-          </motion.span>
+          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+            {showcases.map((item) => (
+              <article key={item.title} className="flex flex-col overflow-hidden rounded-[var(--radius)]">
+                <div className="neu-lg hairline overflow-hidden p-2">
+                  <Image
+                    src={item.image}
+                    alt={item.alt}
+                    placeholder="blur"
+                    sizes="(min-width: 1024px) 31vw, 100vw"
+                    className="aspect-[4/3] rounded-[var(--radius-md)] object-cover object-left-top"
+                  />
+                </div>
+                <div className="pt-5">
+                  <h3 className="text-2xl font-semibold tracking-[-0.02em]">{item.title}</h3>
+                  <p className="mt-3 leading-7 text-muted">{item.copy}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
 
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.05 }}
-            className={`mx-auto mt-6 max-w-3xl text-5xl font-bold leading-[1.05] tracking-tight sm:text-7xl ${grotesk}`}
-          >
-            Master your degree,
-            <br />
-            not your{" "}
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              tabs.
+      <footer className="border-t border-foreground/10 px-5 py-8 sm:px-8 lg:px-10">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-5 text-sm text-muted md:flex-row md:items-center">
+          <div className="flex items-center gap-3">
+            <Logo size={34} />
+            <span>Built for students who want one place to think.</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-5">
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-3.5 w-3.5" />
+              Privacy
             </span>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.15 }}
-            className="mx-auto mt-6 max-w-xl text-lg text-muted"
-          >
-            One beautiful command center for grades, syllabi, resources, flashcards, focus, and
-            studying together — with an AI that knows your semester.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.25 }}
-            className="mt-9 flex flex-wrap items-center justify-center gap-3"
-          >
-            <Link
-              href="/signup"
-              className="neu-btn group flex items-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-primary"
-            >
-              Start free
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </Link>
-            <Link
-              href="/login"
-              className="pressable rounded-full px-6 py-3 text-sm font-medium text-muted hover:text-foreground"
-            >
-              I already have an account
-            </Link>
-          </motion.div>
-          <p className="mt-4 text-xs text-muted">Free to start · Built for the Spanish system — EVAU, cuatrimestres, oposiciones</p>
-        </motion.div>
-
-        {/* Floating hero visual */}
-        <motion.div
-          initial={{ opacity: 0, y: 40, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.7, delay: 0.35 }}
-          className="relative mx-auto mt-16 max-w-3xl"
-        >
-          <div className="glass neu-lg grid gap-4 p-5 sm:grid-cols-3">
-            <div className="glass flex flex-col items-center gap-2 p-5">
-              <div
-                className="grid h-24 w-24 place-items-center rounded-full"
-                style={{
-                  background: `conic-gradient(hsl(var(--primary)) 78%, hsl(var(--surface)) 0)`,
-                  WebkitMask: "radial-gradient(farthest-side,#0000 calc(100% - 11px),#000 0)",
-                  mask: "radial-gradient(farthest-side,#0000 calc(100% - 11px),#000 0)",
-                }}
-              />
-              <p className="-mt-16 text-2xl font-bold tabular-nums">7.8</p>
-              <p className="mt-10 text-xs text-muted">Weighted average</p>
-            </div>
-            <div className="glass flex flex-col justify-between p-5 text-left">
-              <p className="text-xs text-muted">Next exam</p>
-              <p className={`text-lg font-bold ${grotesk}`}>Cálculo II</p>
-              <p className="text-sm text-primary">in 3 days</p>
-            </div>
-            <motion.div
-              animate={reduce ? {} : { y: [0, -8, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="glass flex flex-col justify-between p-5 text-left"
-            >
-              <Users className="h-5 w-5 text-primary" />
-              <p className="text-sm font-medium">3 studying now</p>
-              <p className="text-xs text-muted">Coworking · Sala A</p>
-            </motion.div>
+            <span className="inline-flex items-center gap-1">
+              <Check className="h-3.5 w-3.5" />
+              Terms
+            </span>
           </div>
-        </motion.div>
-      </section>
-
-      {/* Features */}
-      <section className="mx-auto max-w-5xl px-5 py-16">
-        <motion.h2
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true, margin: "-80px" }}
-          variants={fadeUp}
-          transition={{ duration: 0.5 }}
-          className={`text-center text-3xl font-bold tracking-tight sm:text-4xl ${grotesk}`}
-        >
-          Everything your semester needs
-        </motion.h2>
-        <motion.p
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          variants={fadeUp}
-          transition={{ duration: 0.5, delay: 0.05 }}
-          className="mx-auto mt-3 max-w-xl text-center text-muted"
-        >
-          Stop juggling a planner, a grade spreadsheet, an LMS, and five flashcard apps. STiDY is one place.
-        </motion.p>
-
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <motion.div
-              key={f.title}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-60px" }}
-              variants={fadeUp}
-              transition={{ duration: 0.5, delay: (i % 3) * 0.06 }}
-              className={`glass group flex flex-col gap-3 p-6 transition-transform hover:-translate-y-1 ${f.span}`}
-            >
-              <span className="grid h-11 w-11 place-items-center rounded-xl bg-primary/15 text-primary">
-                <f.icon className="h-5 w-5" />
-              </span>
-              <h3 className={`text-lg font-bold tracking-tight ${grotesk}`}>{f.title}</h3>
-              <p className="text-sm text-muted">{f.body}</p>
-            </motion.div>
-          ))}
         </div>
-      </section>
-
-      {/* Why strip */}
-      <section className="mx-auto max-w-5xl px-5 py-16">
-        <div className="grid gap-4 sm:grid-cols-3">
-          {[
-            { icon: Brain, title: "AI that knows you", body: "Resilient Gemini + Groq + NVIDIA chain, grounded in your own subjects and files." },
-            { icon: Palette, title: "Nine living themes", body: "A neumorphic design system that re-skins instantly — from midnight teal to chalkboard." },
-            { icon: ShieldCheck, title: "Your data, yours", body: "Row-level security, private file storage, signed links. Only you see your work." },
-          ].map((c, i) => (
-            <motion.div
-              key={c.title}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              variants={fadeUp}
-              transition={{ duration: 0.5, delay: i * 0.06 }}
-              className="flex flex-col gap-2"
-            >
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-secondary/15 text-secondary">
-                <c.icon className="h-5 w-5" />
-              </span>
-              <h3 className="font-bold tracking-tight">{c.title}</h3>
-              <p className="text-sm text-muted">{c.body}</p>
-            </motion.div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="mx-auto max-w-5xl px-5 py-20">
-        <motion.div
-          initial="hidden"
-          whileInView="show"
-          viewport={{ once: true }}
-          variants={fadeUp}
-          transition={{ duration: 0.6 }}
-          className="glass neu-lg relative overflow-hidden p-10 text-center sm:p-16"
-        >
-          <Zap className="mx-auto h-8 w-8 text-primary" />
-          <h2 className={`mx-auto mt-4 max-w-2xl text-3xl font-bold tracking-tight sm:text-5xl ${grotesk}`}>
-            Your best semester starts now.
-          </h2>
-          <p className="mx-auto mt-4 max-w-md text-muted">
-            Set up your subjects in minutes. Import a syllabus and watch STiDY do the rest.
-          </p>
-          <Link
-            href="/signup"
-            className="neu-btn group mt-8 inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold text-primary"
-          >
-            Create your free account
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </motion.div>
-      </section>
-
-      {/* Footer */}
-      <footer className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-5 py-10 text-center">
-        <div className="flex items-center gap-2">
-          <Logo size={26} wordmark={false} />
-          <span className={`font-bold tracking-tight ${grotesk}`}>STiDY</span>
-        </div>
-        <p className="text-xs text-muted">Built with care for students · © {new Date().getFullYear()} STiDY</p>
       </footer>
-    </div>
+    </main>
   );
 }
