@@ -48,6 +48,12 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // backoff (we run our own provider fallback chain).
 const PER_ATTEMPT_MS = 18_000;
 const SDK_MAX_RETRIES = 1;
+// Whole-request budget, kept under the 60s serverless limit with headroom so we
+// always return a clean error instead of a 504. Every attempt's abort timeout is
+// clamped to the time remaining, so the chain (sleeps + all providers) can never
+// overrun this.
+const TOTAL_BUDGET_MS = 50_000;
+const MIN_ATTEMPT_MS = 4_000;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Messages = any;
@@ -59,26 +65,35 @@ function hasFilePart(messages: Messages | undefined): boolean {
   );
 }
 
-/** Try each model in order; wait+retry the first on rate-limit, then fall through. */
+/**
+ * Try each model in order; wait+retry the first on rate-limit, then fall
+ * through. Deadline-aware: each attempt's abort timeout is clamped to the time
+ * left in TOTAL_BUDGET_MS, so the whole chain (sleeps included) never overruns
+ * the serverless limit and we return a clean error instead of a 504.
+ */
 async function runChain<T>(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   models: any[],
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  run: (m: any) => Promise<T>,
+  run: (m: any, timeoutMs: number) => Promise<T>,
   maxWaitSec: number,
 ): Promise<T> {
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
+  const left = () => deadline - Date.now();
   let lastErr: unknown = new Error("No AI provider configured");
   for (let i = 0; i < models.length; i++) {
+    if (left() < MIN_ATTEMPT_MS) break;
     try {
-      return await run(models[i]);
+      return await run(models[i], Math.min(PER_ATTEMPT_MS, left()));
     } catch (e) {
       lastErr = e;
       if (i === 0 && isRateLimit(e)) {
         const d = retryDelaySec(e);
-        if (d != null && d <= maxWaitSec) {
+        if (d != null && d <= maxWaitSec && (d + 1) * 1000 < left() - MIN_ATTEMPT_MS) {
           await sleep((d + 1) * 1000);
+          if (left() < MIN_ATTEMPT_MS) break;
           try {
-            return await run(models[i]);
+            return await run(models[i], Math.min(PER_ATTEMPT_MS, left()));
           } catch (e2) {
             lastErr = e2;
           }
@@ -111,13 +126,13 @@ export async function generateObjectAI<T>(args: ObjArgs<T>): Promise<T> {
   if (textOnly && groqFallback) models.push(groq(GROQ));
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const run = async (model: any): Promise<T> => {
+  const run = async (model: any, timeoutMs: number): Promise<T> => {
     const { object } = await generateObject({
       model,
       schema,
       ...payload,
       maxRetries: SDK_MAX_RETRIES,
-      abortSignal: AbortSignal.timeout(PER_ATTEMPT_MS),
+      abortSignal: AbortSignal.timeout(timeoutMs),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } as any);
     return object as T;
@@ -150,31 +165,35 @@ export async function generateTextAI(args: {
   if (groqFallback && textOnly) chain.push({ label: `Groq · ${GROQ}`, model: groq(GROQ) });
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const call = async (model: any): Promise<string> =>
+  const call = async (model: any, timeoutMs: number): Promise<string> =>
     (
       await generateText({
         model,
         system,
         ...payload,
         maxRetries: SDK_MAX_RETRIES,
-        abortSignal: AbortSignal.timeout(PER_ATTEMPT_MS),
+        abortSignal: AbortSignal.timeout(timeoutMs),
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any)
     ).text;
 
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
+  const left = () => deadline - Date.now();
   let lastErr: unknown = new Error("No AI provider configured");
   for (let i = 0; i < chain.length; i++) {
+    if (left() < MIN_ATTEMPT_MS) break;
     const { label, model } = chain[i];
     try {
-      return { text: await call(model), model: label };
+      return { text: await call(model, Math.min(PER_ATTEMPT_MS, left())), model: label };
     } catch (e) {
       lastErr = e;
       if (i === 0 && isRateLimit(e)) {
         const d = retryDelaySec(e);
-        if (d != null && d <= maxWaitSec) {
+        if (d != null && d <= maxWaitSec && (d + 1) * 1000 < left() - MIN_ATTEMPT_MS) {
           await sleep((d + 1) * 1000);
+          if (left() < MIN_ATTEMPT_MS) break;
           try {
-            return { text: await call(model), model: label };
+            return { text: await call(model, Math.min(PER_ATTEMPT_MS, left())), model: label };
           } catch (e2) {
             lastErr = e2;
           }
