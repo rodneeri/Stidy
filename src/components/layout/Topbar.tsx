@@ -11,7 +11,9 @@ import {
   CornerDownLeft,
   Settings as SettingsIcon,
   ShieldCheck,
+  Menu,
 } from "lucide-react";
+import { useUiStore } from "@/stores/ui-store";
 import { ThemePicker } from "@/components/theme/ThemePicker";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
 import { HelpButton } from "@/components/help/HelpButton";
@@ -64,6 +66,7 @@ export function Topbar({ displayName, email }: TopbarProps) {
     return [...nav, { kind: "ask", label: q.trim() }];
   }, [q]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setActive(0), [q]);
 
   const run = (item: Suggestion) => {
@@ -94,8 +97,18 @@ export function Topbar({ displayName, email }: TopbarProps) {
     }
   };
 
+  const toggleMobileNav = useUiStore((s) => s.toggleMobileNav);
+
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center gap-3 px-5 backdrop-blur-md">
+      <button
+        type="button"
+        onClick={toggleMobileNav}
+        aria-label="Open navigation"
+        className="pressable grid h-10 w-10 shrink-0 place-items-center rounded-full text-muted hover:text-foreground lg:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
       <div className="relative max-w-md flex-1">
         <form
           onSubmit={onSubmit}
