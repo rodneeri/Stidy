@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Users, Plus, LogIn, Lock, Globe, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { CoworkRoom as Room } from "@/types/db";
@@ -28,6 +28,7 @@ export function CoworkingHub({ userId, displayName }: Props) {
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const lobbyRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,8 +49,43 @@ export function CoworkingHub({ userId, displayName }: Props) {
   }, [supabase, userId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  // Live lobby: new public rooms appear without a reload. postgres_changes is
+  // the main path; a broadcast on create is the resilient fallback (works even
+  // if the realtime publication isn't configured yet). setState here is driven
+  // by realtime callbacks (an external system) — the intended pattern.
+  useEffect(() => {
+    const addPublic = (r: Room) => {
+      if (r.is_private || r.owner_id === userId) return;
+      setPublicRooms((prev) => (prev.some((x) => x.id === r.id) ? prev : [r, ...prev]));
+    };
+    const channel = supabase
+      .channel("cowork:lobby")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "cowork_rooms" },
+        (payload) => addPublic(payload.new as Room),
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "cowork_rooms" },
+        (payload) => {
+          const id = (payload.old as { id: string }).id;
+          setPublicRooms((prev) => prev.filter((x) => x.id !== id));
+          setMyRooms((prev) => prev.filter((x) => x.id !== id));
+        },
+      )
+      .on("broadcast", { event: "room" }, ({ payload }) => addPublic(payload as Room))
+      .subscribe();
+    lobbyRef.current = channel;
+    return () => {
+      lobbyRef.current = null;
+      supabase.removeChannel(channel);
+    };
+  }, [supabase, userId]);
 
   const createRoom = async () => {
     const n = name.trim();
@@ -59,7 +95,7 @@ export function CoworkingHub({ userId, displayName }: Props) {
     const { data, error: e } = await supabase
       .from("cowork_rooms")
       .insert({ owner_id: userId, name: n, is_private: isPrivate })
-      .select("id")
+      .select("*")
       .single();
     setBusy(false);
     if (e) {
@@ -67,7 +103,13 @@ export function CoworkingHub({ userId, displayName }: Props) {
       return;
     }
     setName("");
-    if (data) setActiveRoomId(data.id as string);
+    if (data) {
+      // Tell other lobbies live (resilient fallback to postgres_changes).
+      if (!(data as Room).is_private) {
+        lobbyRef.current?.send({ type: "broadcast", event: "room", payload: data });
+      }
+      setActiveRoomId((data as Room).id);
+    }
   };
 
   const joinByCode = async (raw?: string) => {

@@ -39,6 +39,12 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const scrollRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Append a message unless we already have it (de-dupe across broadcast,
+  // postgres_changes, and the optimistic local add — all share the row id).
+  const addMessage = (m: CoworkMessage) =>
+    setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, m]));
 
   // Initial load.
   useEffect(() => {
@@ -79,13 +85,13 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "cowork_messages", filter: `room_id=eq.${roomId}` },
-        (payload) =>
-          setMessages((prev) => {
-            const m = payload.new as CoworkMessage;
-            // De-dupe: the sender may have already added this optimistically.
-            return prev.some((x) => x.id === m.id) ? prev : [...prev, m];
-          }),
+        (payload) => addMessage(payload.new as CoworkMessage),
       )
+      // Broadcast is the primary live path: it delivers to everyone on the
+      // channel instantly and does NOT depend on the realtime publication or
+      // RLS being perfectly configured (postgres_changes above does). Belt and
+      // suspenders — both are de-duped by row id.
+      .on("broadcast", { event: "msg" }, ({ payload }) => addMessage(payload as CoworkMessage))
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "cowork_rooms", filter: `id=eq.${roomId}` },
@@ -105,7 +111,9 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
           );
         }
       });
+    channelRef.current = channel;
     return () => {
+      channelRef.current = null;
       supabase.removeChannel(channel);
     };
   }, [supabase, roomId, userId, displayName]);
@@ -139,33 +147,34 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
     const body = draft.trim();
     if (!body) return;
     setDraft("");
-    const { data, error } = await supabase
-      .from("cowork_messages")
-      .insert({ room_id: roomId, user_id: userId, author_name: displayName, body })
-      .select()
-      .single();
+    // One shared id across optimistic add, broadcast, persistence and the
+    // postgres_changes echo so every path de-dupes to a single bubble.
+    const msg: CoworkMessage = {
+      id: crypto.randomUUID(),
+      room_id: roomId,
+      user_id: userId,
+      author_name: displayName,
+      body,
+      created_at: new Date().toISOString(),
+    };
+    // 1) Show it locally + push live to everyone on the channel immediately.
+    addMessage(msg);
+    channelRef.current?.send({ type: "broadcast", event: "msg", payload: msg });
+    // 2) Persist for history (best-effort — live delivery already happened).
+    const { error } = await supabase.from("cowork_messages").insert(msg);
     if (error) {
-      setDraft(body); // don't lose what they typed
       useErrorStore.getState().report(
         new AppError({
-          title: "Message not sent",
+          title: "Message sent live but not saved",
           source: "Coworking · chat",
           systemMessage: `${error.message}${error.details ? `\n${error.details}` : ""}${
             error.hint ? `\n${error.hint}` : ""
           } (code ${error.code ?? "?"})`,
-          hint: "If this mentions row-level security or membership, either you haven't joined this room or the coworking migration isn't fully applied. Re-run supabase/migrations/2026-06-16_coworking.sql.",
+          hint: "Others saw it live, but it won't survive a reload. This usually means the coworking migration isn't fully applied — run supabase/migrations/2026-06-16_coworking.sql in Supabase.",
         }),
         "Coworking · chat",
       );
-      return;
     }
-    // Optimistic: show our own message immediately (realtime echo is de-duped).
-    if (data)
-      setMessages((prev) =>
-        prev.some((x) => x.id === (data as CoworkMessage).id)
-          ? prev
-          : [...prev, data as CoworkMessage],
-      );
   };
 
   const copyCode = async () => {
