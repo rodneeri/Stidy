@@ -300,22 +300,16 @@ export function Landing() {
           >
             <div className="glass neu-lg grid gap-4 p-5 sm:grid-cols-3">
               <div className="glass flex flex-col items-center justify-center gap-3 p-5">
-                {/* Clean SVG ring — replaces the old conic-gradient + negative-
-                    margin overlap hack that rendered misaligned against the UI. */}
-                <div className="relative grid h-24 w-24 place-items-center">
-                  <svg viewBox="0 0 100 100" className="h-24 w-24 -rotate-90">
-                    <circle
-                      cx="50" cy="50" r="42" fill="none"
-                      stroke="hsl(var(--border))" strokeWidth="8"
-                    />
-                    <circle
-                      cx="50" cy="50" r="42" fill="none"
-                      stroke="hsl(var(--primary))" strokeWidth="8" strokeLinecap="round"
-                      strokeDasharray={2 * Math.PI * 42}
-                      strokeDashoffset={2 * Math.PI * 42 * (1 - 0.78)}
-                    />
-                  </svg>
-                  <span className="absolute text-2xl font-bold tabular-nums">7.8</span>
+                {/* Skeuomorphic dial — carved well + raised cap, matching the
+                    in-app Focus dial (.dial / .dial__fill / .dial__cap). */}
+                <div
+                  className="dial h-24 w-24"
+                  style={{ ["--dial-p" as string]: 78, ["--dial-stroke" as string]: "9px" } as React.CSSProperties}
+                >
+                  <div className="dial__fill" />
+                  <div className="dial__cap" style={{ width: 64, height: 64 }}>
+                    <span className="text-2xl font-bold tabular-nums">7.8</span>
+                  </div>
                 </div>
                 <p className="text-xs text-muted">Weighted average</p>
               </div>
