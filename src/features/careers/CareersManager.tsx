@@ -166,6 +166,9 @@ export function CareersManager() {
     // Strip the migration-only columns if the DB doesn't have them yet.
     const stripNew = (p: typeof patch) => {
       const { icon: _i, year: _y, term: _t, ...basic } = p;
+      void _i;
+      void _y;
+      void _t;
       return basic;
     };
     if (subjectDraft.id) {

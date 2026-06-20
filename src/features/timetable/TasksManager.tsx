@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
 import { Plus, X, AlertTriangle, Copy, Check, CalendarDays, Filter } from "lucide-react";
@@ -163,11 +163,12 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
   }, []);
 
   // Preselect the subject when deep-linked from Subjects. Derived from props
-  // during render (guarded by a ref) instead of calling setState in an
-  // effect body.
-  const appliedFilterSubject = useRef<string | null>(null);
-  if (filterSubject && appliedFilterSubject.current !== filterSubject) {
-    appliedFilterSubject.current = filterSubject;
+  // during render (guarded by state, not a ref — React allows calling
+  // setState during render when guarded like this, but never allows reading
+  // or writing a ref's `.current` during render).
+  const [appliedFilterSubject, setAppliedFilterSubject] = useState<string | null>(null);
+  if (filterSubject && appliedFilterSubject !== filterSubject) {
+    setAppliedFilterSubject(filterSubject);
     setForm((f) => ({ ...f, subjectId: filterSubject }));
   }
 
@@ -209,7 +210,6 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
 
   const subjectName = (id: string | null) => subjects.find((s) => s.id === id)?.name;
   const subjectCareer = (id: string | null) => subjects.find((s) => s.id === id)?.career_id ?? null;
-  const careerName = (id: string | null) => careers.find((c) => c.id === id)?.name;
 
   const bySubject = filterSubject ? tasks.filter((t) => t.subject_id === filterSubject) : tasks;
   const visible = bySubject.filter((t) => {
