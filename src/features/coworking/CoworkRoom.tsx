@@ -92,6 +92,20 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
       // RLS being perfectly configured (postgres_changes above does). Belt and
       // suspenders — both are de-duped by row id.
       .on("broadcast", { event: "msg" }, ({ payload }) => addMessage(payload as CoworkMessage))
+      // Shared timer also syncs over broadcast (instant, no dependency on the
+      // postgres_changes UPDATE being delivered — that's why Pomodoro looked dead).
+      .on("broadcast", { event: "timer" }, ({ payload }) =>
+        setRoom((r) =>
+          r
+            ? {
+                ...r,
+                timer_phase: payload.timer_phase,
+                timer_started_at: payload.timer_started_at,
+                timer_duration_secs: payload.timer_duration_secs,
+              }
+            : r,
+        ),
+      )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "cowork_rooms", filter: `id=eq.${roomId}` },
@@ -135,13 +149,35 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
     : 0;
   const remaining = room ? Math.max(0, room.timer_duration_secs - elapsed) : 0;
 
-  const setTimer = (phase: "idle" | "focus" | "break", secs: number) =>
-    supabase.rpc("set_cowork_timer", {
+  const setTimer = async (phase: "idle" | "focus" | "break", secs: number) => {
+    const started_at = phase === "idle" ? null : new Date().toISOString();
+    // Optimistic locally + broadcast live to the room, then persist via RPC.
+    setRoom((r) =>
+      r ? { ...r, timer_phase: phase, timer_started_at: started_at, timer_duration_secs: secs } : r,
+    );
+    channelRef.current?.send({
+      type: "broadcast",
+      event: "timer",
+      payload: { timer_phase: phase, timer_started_at: started_at, timer_duration_secs: secs },
+    });
+    const { error } = await supabase.rpc("set_cowork_timer", {
       p_room: roomId,
       p_phase: phase,
-      p_started_at: phase === "idle" ? null : new Date().toISOString(),
+      p_started_at: started_at,
       p_duration: secs,
     });
+    if (error) {
+      useErrorStore.getState().report(
+        new AppError({
+          title: "Timer not saved",
+          source: "Coworking · timer",
+          systemMessage: `${error.message} (code ${error.code ?? "?"})`,
+          hint: "Everyone saw it live, but it won't survive a reload. Usually a membership/RLS issue.",
+        }),
+        "Coworking · timer",
+      );
+    }
+  };
 
   const send = async () => {
     const body = draft.trim();

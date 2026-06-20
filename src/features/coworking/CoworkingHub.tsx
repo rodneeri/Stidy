@@ -105,8 +105,13 @@ export function CoworkingHub({ userId, displayName }: Props) {
     setName("");
     if (data) {
       // Tell other lobbies live (resilient fallback to postgres_changes).
+      // Guarded: a not-yet-subscribed channel must never block entering the room.
       if (!(data as Room).is_private) {
-        lobbyRef.current?.send({ type: "broadcast", event: "room", payload: data });
+        try {
+          void lobbyRef.current?.send({ type: "broadcast", event: "room", payload: data });
+        } catch {
+          /* non-fatal */
+        }
       }
       setActiveRoomId((data as Room).id);
     }
