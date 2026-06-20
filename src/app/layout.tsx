@@ -15,9 +15,9 @@ const fontSans = DM_Sans({ subsets: ["latin"], variable: "--font-dmsans" });
 const fontMono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jbmono" });
 
 export const metadata: Metadata = {
-  title: "STiDY — Your Academic Operating System",
+  title: "STiDY — The Open-Source Study Workspace",
   description:
-    "STiDY unifies grades, syllabi, resources, flashcards, and focus into one intelligent command center.",
+    "STiDY is the open-source study workspace that unifies grades, syllabi, resources, flashcards, and focus into one intelligent command center.",
 };
 
 // Runs before paint: restores the saved theme so there's no flash of the default.

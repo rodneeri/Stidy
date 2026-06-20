@@ -14,6 +14,7 @@ import {
   Brain,
   Zap,
   ShieldCheck,
+  Code2,
 } from "lucide-react";
 import { Logo } from "@/components/brand/Logo";
 import { MeshBackground } from "@/components/layout/MeshBackground";
@@ -105,7 +106,7 @@ const FAQS: FAQItem[] = [
   {
     question: "Is STiDY free?",
     answer:
-      "Yes — you can create an account and use the core tools (grades, timetable, resource vault, focus timer) for free. Some AI-heavy features may have fair-use limits as we grow.",
+      "Yes — and it's fully open source. You can create an account and use the core tools (grades, timetable, resource vault, focus timer) for free, read the code on GitHub, self-host, or contribute. Some AI-heavy features may have fair-use limits as we grow.",
   },
   {
     question: "Which university system is this built for?",
@@ -206,7 +207,7 @@ export function Landing() {
             className="neu inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-medium text-muted"
           >
             <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-            The Personal Academic Operating System
+            Open source · The all-in-one study workspace
           </motion.span>
 
           <motion.h1
@@ -265,17 +266,25 @@ export function Landing() {
             className="relative mx-auto max-w-3xl"
           >
             <div className="glass neu-lg grid gap-4 p-5 sm:grid-cols-3">
-              <div className="glass flex flex-col items-center gap-2 p-5">
-                <div
-                  className="grid h-24 w-24 place-items-center rounded-full"
-                  style={{
-                    background: `conic-gradient(hsl(var(--primary)) 78%, hsl(var(--surface)) 0)`,
-                    WebkitMask: "radial-gradient(farthest-side,#0000 calc(100% - 11px),#000 0)",
-                    mask: "radial-gradient(farthest-side,#0000 calc(100% - 11px),#000 0)",
-                  }}
-                />
-                <p className="-mt-16 text-2xl font-bold tabular-nums">7.8</p>
-                <p className="mt-10 text-xs text-muted">Weighted average</p>
+              <div className="glass flex flex-col items-center justify-center gap-3 p-5">
+                {/* Clean SVG ring — replaces the old conic-gradient + negative-
+                    margin overlap hack that rendered misaligned against the UI. */}
+                <div className="relative grid h-24 w-24 place-items-center">
+                  <svg viewBox="0 0 100 100" className="h-24 w-24 -rotate-90">
+                    <circle
+                      cx="50" cy="50" r="42" fill="none"
+                      stroke="hsl(var(--border))" strokeWidth="8"
+                    />
+                    <circle
+                      cx="50" cy="50" r="42" fill="none"
+                      stroke="hsl(var(--primary))" strokeWidth="8" strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 42}
+                      strokeDashoffset={2 * Math.PI * 42 * (1 - 0.78)}
+                    />
+                  </svg>
+                  <span className="absolute text-2xl font-bold tabular-nums">7.8</span>
+                </div>
+                <p className="text-xs text-muted">Weighted average</p>
               </div>
               <div className="glass flex flex-col justify-between p-5 text-left">
                 <p className="text-xs text-muted">Next exam</p>
@@ -403,6 +412,14 @@ export function Landing() {
           <span className={`font-bold tracking-tight ${grotesk}`}>STiDY</span>
         </div>
         <p className="text-xs text-muted">Built with care for students · © {new Date().getFullYear()} STiDY</p>
+        <a
+          href="https://github.com/rodneeri/Stidy"
+          target="_blank"
+          rel="noreferrer"
+          className="pressable inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-muted hover:text-primary"
+        >
+          <Code2 className="h-3.5 w-3.5" /> Open source on GitHub
+        </a>
       </footer>
     </div>
   );

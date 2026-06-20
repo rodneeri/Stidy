@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Shuffle, Pencil, ArrowLeft, Layers, RotateCw, Check } from "lucide-react";
+import { X, Shuffle, Pencil, ArrowLeft, Layers, RotateCw, Check, Tag } from "lucide-react";
 import { MathText } from "@/components/ui/MathText";
 import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Portal } from "@/components/ui/Portal";
@@ -30,28 +30,49 @@ interface Props {
   onUpdate: (id: string, front: string, back: string) => Promise<void> | void;
   onDelete: (id: string) => Promise<void> | void;
   onDeleteAll: () => Promise<void> | void;
+  /** Optional set name shown + editable in the stack header. */
+  setName?: string;
+  /** Persist a renamed set. Enables the inline rename control in the header. */
+  onRename?: (name: string) => Promise<void> | void;
 }
 
-export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll }: Props) {
+export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll, setName, onRename }: Props) {
   const [open, setOpen] = useState(false);
   const [phase, setPhase] = useState<"shuffle" | "study">("shuffle");
   const [order, setOrder] = useState<Flashcard[]>([]);
   const [flipped, setFlipped] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [naming, setNaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState(setName ?? "");
+  const shuffleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear any pending shuffle→study timer on unmount so a late setState can't
+  // fire into an unmounted tree (a subtle source of "crash after shuffle").
+  useEffect(() => () => {
+    if (shuffleTimer.current) clearTimeout(shuffleTimer.current);
+  }, []);
+
+  const commitName = () => {
+    const v = nameDraft.trim();
+    setNaming(false);
+    if (v && v !== setName) void onRename?.(v);
+  };
 
   const launch = () => {
+    if (shuffleTimer.current) clearTimeout(shuffleTimer.current);
     setOrder(shuffleArr(uniqById(cards)));
     setFlipped(false);
     setEditing(false);
     setPhase("shuffle");
     setOpen(true);
-    setTimeout(() => setPhase("study"), 1200);
+    shuffleTimer.current = setTimeout(() => setPhase("study"), 1200);
   };
   const reshuffle = () => {
+    if (shuffleTimer.current) clearTimeout(shuffleTimer.current);
     setFlipped(false);
     setPhase("shuffle");
-    setOrder((o) => shuffleArr(o));
-    setTimeout(() => setPhase("study"), 1000);
+    setOrder((o) => shuffleArr(uniqById(o)));
+    shuffleTimer.current = setTimeout(() => setPhase("study"), 1000);
   };
   const next = () => {
     setFlipped(false);
@@ -107,7 +128,36 @@ export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll }: Props
               {/* header */}
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-primary" />
-                <p className="flex-1 font-semibold">{editing ? "Edit cards" : "Flashcards"}</p>
+                {editing ? (
+                  <p className="flex-1 font-semibold">Edit cards</p>
+                ) : naming && onRename ? (
+                  <input
+                    autoFocus
+                    value={nameDraft}
+                    onChange={(e) => setNameDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitName();
+                      if (e.key === "Escape") setNaming(false);
+                    }}
+                    onBlur={commitName}
+                    placeholder="Set name"
+                    className="field min-w-0 flex-1 rounded-lg px-2 py-1 text-sm font-semibold outline-none"
+                  />
+                ) : (
+                  <p className="min-w-0 flex-1 truncate font-semibold">{setName?.trim() || "Flashcards"}</p>
+                )}
+                {!editing && onRename && (
+                  <button
+                    onClick={() => {
+                      setNameDraft(setName ?? "");
+                      setNaming((n) => !n);
+                    }}
+                    className="pressable grid h-8 w-8 place-items-center rounded-lg text-muted hover:text-primary"
+                    aria-label="Rename set"
+                  >
+                    {naming ? <Check className="h-4 w-4" /> : <Tag className="h-4 w-4" />}
+                  </button>
+                )}
                 {!editing && (
                   <>
                     <button onClick={reshuffle} className="pressable grid h-8 w-8 place-items-center rounded-lg text-muted hover:text-primary" aria-label="Shuffle">
@@ -157,7 +207,11 @@ export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll }: Props
                         style={{ transform: `translateY(${(i + 1) * 6}px) scale(${1 - (i + 1) * 0.03})`, opacity: 0.6 - i * 0.2 }}
                       />
                     ))}
-                    <AnimatePresence mode="popLayout" initial={false}>
+                    {/* mode="wait" (not popLayout): on React 19, popLayout can
+                        throw removeChild DOM errors during reconciliation —
+                        those fire outside render so the ErrorBoundary can't
+                        catch them, crashing the whole view after a shuffle. */}
+                    <AnimatePresence mode="wait" initial={false}>
                       <motion.div
                         key={top.id}
                         initial={{ opacity: 0, scale: 0.92 }}

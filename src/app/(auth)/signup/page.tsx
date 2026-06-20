@@ -19,7 +19,7 @@ export default async function SignupPage({
           <h1 className="display-3">
             Create your <span className="text-gradient">account</span>
           </h1>
-          <p className="mt-1 text-sm text-muted">Your academic OS starts here</p>
+          <p className="mt-1 text-sm text-muted">Your open-source study workspace starts here</p>
         </div>
       </div>
 

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { MeshBackground } from "@/components/layout/MeshBackground";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { HelpButton } from "@/components/help/HelpButton";
 import { AssistantChat } from "@/features/assistant/AssistantChat";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { PageTransition } from "@/components/layout/PageTransition";
@@ -32,7 +31,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
-      <HelpButton />
       <AssistantChat />
       <CommandPalette />
     </div>

@@ -595,6 +595,8 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
                   onUpdate={updateCard}
                   onDelete={deleteCard}
                   onDeleteAll={deleteAllCards}
+                  setName={activeSet?.name}
+                  onRename={activeSet ? (name) => doRenameSet(activeSet.id, name) : undefined}
                 />
               </div>
             )}

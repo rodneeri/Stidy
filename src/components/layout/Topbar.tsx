@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ThemePicker } from "@/components/theme/ThemePicker";
 import { NotificationsBell } from "@/components/layout/NotificationsBell";
+import { HelpButton } from "@/components/help/HelpButton";
 import { askAssistant } from "@/features/assistant/assistant-bus";
 import { NAV_ITEMS } from "@/config/nav";
 import { signOut } from "@/app/(auth)/actions";
@@ -179,6 +180,7 @@ export function Topbar({ displayName, email }: TopbarProps) {
       </div>
 
       <div className="ml-auto flex items-center gap-2.5">
+        <HelpButton />
         <ThemePicker />
         <NotificationsBell />
         <ProfileMenu displayName={displayName} email={email} initial={initial} />

@@ -18,7 +18,8 @@ export function HelpButton() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Help for this page"
-        className="neu-btn fixed bottom-6 right-[4.75rem] z-40 grid h-12 w-12 place-items-center rounded-full"
+        title="Help for this page"
+        className="pressable grid h-10 w-10 place-items-center rounded-full text-muted hover:text-primary"
       >
         <HelpCircle className="h-5 w-5" />
       </button>
