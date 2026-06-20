@@ -3,6 +3,7 @@ import { MeshBackground } from "@/components/layout/MeshBackground";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { AssistantChat } from "@/features/assistant/AssistantChat";
+import { FocusOverlay } from "@/features/focus/FocusOverlay";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { createClient } from "@/lib/supabase/server";
@@ -32,6 +33,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <AssistantChat />
+      <FocusOverlay />
       <CommandPalette />
     </div>
   );

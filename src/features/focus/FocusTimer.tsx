@@ -1,22 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Play, Pause, RotateCcw, SkipForward, Volume2, Timer, Watch, Flag } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
 import { NeuSlider } from "@/components/ui/NeuSlider";
 import { Dropdown } from "@/components/ui/Dropdown";
+import { useFocusStore, PRESETS, type View } from "@/stores/focus-store";
 import { cn } from "@/lib/utils";
 
-type Mode = "focus" | "break";
 type Noise = "off" | "white" | "pink" | "brown";
-type View = "timer" | "stopwatch";
-type Preset = { label: string; focus: number; brk: number };
 
-const PRESETS: Preset[] = [
-  { label: "Pomodoro", focus: 25, brk: 5 },
-  { label: "Deep work", focus: 50, brk: 10 },
-];
 const NOISES: { id: Noise; label: string }[] = [
   { id: "off", label: "Off" },
   { id: "pink", label: "Rain" },
@@ -88,51 +81,6 @@ const mmsscs = (ms: number) => {
 };
 const hours = (s: number) => `${(s / 3600).toFixed(1)}h`;
 
-function playAlarm() {
-  try {
-    const ctx = new AudioContext();
-    const master = ctx.createGain();
-    master.gain.value = 0.9;
-    master.connect(ctx.destination);
-
-    // A soft bell: fundamental + a quiet octave shimmer, gentle attack, long decay.
-    const bell = (t: number, freq: number, dur: number, vol: number) => {
-      const o = ctx.createOscillator();
-      const o2 = ctx.createOscillator();
-      const g = ctx.createGain();
-      const g2 = ctx.createGain();
-      o.type = "sine";
-      o.frequency.value = freq;
-      o2.type = "sine";
-      o2.frequency.value = freq * 2.01; // slightly detuned octave = shimmer
-      g2.gain.value = 0.22;
-      o.connect(g);
-      o2.connect(g2).connect(g);
-      g.connect(master);
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.start(t);
-      o2.start(t);
-      o.stop(t + dur);
-      o2.stop(t + dur);
-    };
-
-    // A calm major arpeggio (C5–E5–G5), repeated a few times — relaxed but persistent.
-    const chord = [523.25, 659.25, 783.99];
-    const reps = 5;
-    const gap = 1.5;
-    const start = ctx.currentTime + 0.05;
-    for (let r = 0; r < reps; r++) {
-      const base = start + r * gap;
-      chord.forEach((f, i) => bell(base + i * 0.16, f, 1.9, 0.16));
-    }
-    setTimeout(() => ctx.close(), (reps * gap + 2.4) * 1000);
-  } catch {
-    /* ignore */
-  }
-}
-
 function fillNoise(buf: AudioBuffer, type: Noise) {
   const d = buf.getChannelData(0);
   if (type === "brown") {
@@ -161,173 +109,43 @@ function fillNoise(buf: AudioBuffer, type: Noise) {
 }
 
 export function FocusTimer() {
-  const supabase = useMemo(() => createClient(), []);
-  const [userId, setUserId] = useState<string | null>(null);
-  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
-  const [subjectId, setSubjectId] = useState("");
+  // Timer + stopwatch state live in the global store so they keep running
+  // (and surface as a picture-in-picture mini-clock) across tab navigation.
+  const init = useFocusStore((s) => s.init);
+  const subjects = useFocusStore((s) => s.subjects);
+  const subjectId = useFocusStore((s) => s.subjectId);
+  const setSubjectId = useFocusStore((s) => s.setSubjectId);
+  const view = useFocusStore((s) => s.view);
+  const setView = useFocusStore((s) => s.setView);
+  const preset = useFocusStore((s) => s.preset);
+  const customSec = useFocusStore((s) => s.customSec);
+  const mode = useFocusStore((s) => s.mode);
+  const secondsLeft = useFocusStore((s) => s.secondsLeft);
+  const running = useFocusStore((s) => s.running);
+  const sessions = useFocusStore((s) => s.sessions);
+  const swMs = useFocusStore((s) => s.swMs);
+  const swRunning = useFocusStore((s) => s.swRunning);
+  const laps = useFocusStore((s) => s.laps);
+  const todaySec = useFocusStore((s) => s.todaySec);
+  const weekSec = useFocusStore((s) => s.weekSec);
+  const choosePreset = useFocusStore((s) => s.choosePreset);
+  const applyCustom = useFocusStore((s) => s.applyCustom);
+  const toggleRun = useFocusStore((s) => s.toggleRun);
+  const reset = useFocusStore((s) => s.reset);
+  const skip = useFocusStore((s) => s.skip);
+  const toggleSw = useFocusStore((s) => s.toggleSw);
+  const resetSw = useFocusStore((s) => s.resetSw);
+  const lap = useFocusStore((s) => s.lap);
 
-  const [view, setView] = useState<View>("timer");
-  const [preset, setPreset] = useState<Preset>(PRESETS[0]);
-  const [customSec, setCustomSec] = useState(25 * 60);
-  const [mode, setMode] = useState<Mode>("focus");
-  const [secondsLeft, setSecondsLeft] = useState(PRESETS[0].focus * 60);
-  const [running, setRunning] = useState(false);
-  const [sessions, setSessions] = useState(0);
-  const [phaseId, setPhaseId] = useState(0); // bumps on each new phase so the timer re-arms
+  useEffect(() => {
+    void init();
+  }, [init]);
 
-  const [todaySec, setTodaySec] = useState(0);
-  const [weekSec, setWeekSec] = useState(0);
-
+  // ambience (Web Audio, no assets) — page-local, stops when you leave Focus.
   const [noise, setNoise] = useState<Noise>("off");
   const [volume, setVolume] = useState(0.4);
-
-  // stopwatch
-  const [swMs, setSwMs] = useState(0);
-  const [swRunning, setSwRunning] = useState(false);
-  const [laps, setLaps] = useState<number[]>([]);
-  const swStartRef = useRef<number | null>(null);
-
-  const total = (mode === "focus" ? preset.focus : preset.brk) * 60;
   const audioRef = useRef<{ ctx: AudioContext; src: AudioBufferSourceNode; gain: GainNode } | null>(null);
-  const endAtRef = useRef<number | null>(null); // target end timestamp (ms) while running
-  const secLeftRef = useRef(secondsLeft);
-  secLeftRef.current = secondsLeft;
 
-  const loadStats = useCallback(async () => {
-    const startToday = new Date();
-    startToday.setHours(0, 0, 0, 0);
-    const weekAgo = new Date(startToday.getTime() - 6 * 86400000);
-    const { data } = await supabase
-      .from("study_logs")
-      .select("duration_seconds, started_at")
-      .eq("kind", "focus")
-      .gte("started_at", weekAgo.toISOString());
-    let t = 0;
-    let w = 0;
-    for (const r of (data as { duration_seconds: number; started_at: string }[]) ?? []) {
-      w += r.duration_seconds;
-      if (new Date(r.started_at) >= startToday) t += r.duration_seconds;
-    }
-    setTodaySec(t);
-    setWeekSec(w);
-  }, [supabase]);
-
-  useEffect(() => {
-    (async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUserId(user?.id ?? null);
-      const { data } = await supabase.from("subjects").select("id, name").is("parent_id", null).order("name");
-      setSubjects((data as { id: string; name: string }[]) ?? []);
-      await loadStats();
-    })();
-  }, [supabase, loadStats]);
-
-  const logStudy = useCallback(
-    async (seconds: number) => {
-      if (!userId || seconds < 30) return;
-      await supabase.from("study_logs").insert({
-        user_id: userId,
-        subject_id: subjectId || null,
-        duration_seconds: Math.round(seconds),
-        kind: "focus",
-      });
-      await loadStats();
-    },
-    [supabase, userId, subjectId, loadStats],
-  );
-
-  // countdown — driven by a target timestamp, not by counting ticks, so it stays
-  // accurate when the tab is backgrounded (browsers throttle setInterval there)
-  // and the session still completes/logs when you return. Re-syncs on focus/visibility.
-  useEffect(() => {
-    if (!running) {
-      endAtRef.current = null;
-      return;
-    }
-    endAtRef.current = Date.now() + secLeftRef.current * 1000;
-    const tick = () => {
-      if (endAtRef.current != null) setSecondsLeft(Math.round((endAtRef.current - Date.now()) / 1000));
-    };
-    const id = setInterval(tick, 1000);
-    const onVisible = () => {
-      if (!document.hidden) tick();
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", onVisible);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", onVisible);
-    };
-  }, [running, phaseId]);
-
-  // phase completion (+ alarm)
-  useEffect(() => {
-    if (secondsLeft > 0) return;
-    playAlarm();
-    if (mode === "focus") {
-      logStudy(preset.focus * 60);
-      setSessions((n) => n + 1);
-      setMode("break");
-      setSecondsLeft(preset.brk * 60);
-    } else {
-      setMode("focus");
-      setSecondsLeft(preset.focus * 60);
-    }
-    setPhaseId((p) => p + 1); // re-arm the timestamp timer for the new phase
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [secondsLeft]);
-
-  // stopwatch tick
-  useEffect(() => {
-    if (!swRunning) return;
-    const id = setInterval(() => {
-      if (swStartRef.current != null) setSwMs(Date.now() - swStartRef.current);
-    }, 47);
-    return () => clearInterval(id);
-  }, [swRunning]);
-
-  function resetTimer() {
-    if (mode === "focus" && running) logStudy(preset.focus * 60 - secondsLeft);
-    setRunning(false);
-    setMode("focus");
-    setSecondsLeft(preset.focus * 60);
-  }
-  function skip() {
-    if (mode === "focus") logStudy(preset.focus * 60 - secondsLeft);
-    setMode((m) => (m === "focus" ? "break" : "focus"));
-    setSecondsLeft((mode === "focus" ? preset.brk : preset.focus) * 60);
-    setPhaseId((p) => p + 1);
-  }
-  function choosePreset(p: Preset) {
-    setPreset(p);
-    setRunning(false);
-    setMode("focus");
-    setSecondsLeft(p.focus * 60);
-  }
-  function applyCustom(secs: number) {
-    setCustomSec(secs);
-    choosePreset({ label: "Custom", focus: Math.max(secs, 1) / 60, brk: 5 });
-  }
-
-  function toggleSw() {
-    if (swRunning) {
-      setSwRunning(false);
-    } else {
-      swStartRef.current = Date.now() - swMs;
-      setSwRunning(true);
-    }
-  }
-  function resetSw() {
-    setSwRunning(false);
-    setSwMs(0);
-    setLaps([]);
-    swStartRef.current = null;
-  }
-
-  // ambience (Web Audio, no assets)
   const stopNoise = useCallback(() => {
     if (audioRef.current) {
       try {
@@ -367,6 +185,7 @@ export function FocusTimer() {
 
   useEffect(() => () => stopNoise(), [stopNoise]);
 
+  const total = (mode === "focus" ? preset.focus : preset.brk) * 60;
   const pct = total > 0 ? ((total - secondsLeft) / total) * 100 : 0;
   const overworked = todaySec > 4 * 3600;
   const editingCustom = preset.label === "Custom" && !running;
@@ -480,7 +299,7 @@ export function FocusTimer() {
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setRunning((r) => !r)}
+                  onClick={toggleRun}
                   className="neu-btn grid h-14 w-14 place-items-center rounded-full text-primary"
                   aria-label={running ? "Pause" : "Start"}
                 >
@@ -489,7 +308,7 @@ export function FocusTimer() {
                 <button onClick={skip} className="neu-btn grid h-11 w-11 place-items-center rounded-full" aria-label="Skip">
                   <SkipForward className="h-5 w-5" />
                 </button>
-                <button onClick={resetTimer} className="neu-btn grid h-11 w-11 place-items-center rounded-full" aria-label="Reset">
+                <button onClick={reset} className="neu-btn grid h-11 w-11 place-items-center rounded-full" aria-label="Reset">
                   <RotateCcw className="h-5 w-5" />
                 </button>
               </div>
@@ -519,7 +338,7 @@ export function FocusTimer() {
                   {swRunning ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
                 </button>
                 <button
-                  onClick={() => swRunning && setLaps((l) => [swMs, ...l])}
+                  onClick={lap}
                   disabled={!swRunning}
                   className="neu-btn grid h-11 w-11 place-items-center rounded-full disabled:opacity-40"
                   aria-label="Lap"
