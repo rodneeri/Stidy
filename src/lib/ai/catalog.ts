@@ -28,8 +28,25 @@ export const NVIDIA_MODELS: AiModelOption[] = [
   { value: "meta/llama-3.1-8b-instruct", label: "Llama 3.1 8B", hint: "Fastest — quick lookups" },
 ];
 
+/** Google Gemini — most reliable at structured/JSON output. Sentinel value. */
+export const GEMINI_MODEL_VALUE = "gemini";
+export const GEMINI_OPTION: AiModelOption = {
+  value: GEMINI_MODEL_VALUE,
+  label: "Gemini 2.5 Flash",
+  hint: "Google — most reliable, great at JSON",
+};
+
+/** Everything selectable in the in-app model pickers (Gemini + NVIDIA NIM). */
+export const AI_MODELS: AiModelOption[] = [GEMINI_OPTION, ...NVIDIA_MODELS];
+
 export const DEFAULT_AI_MODEL = NVIDIA_MODELS[0].value;
 
+/** A valid model the user can pick (Gemini sentinel or a known NVIDIA id). */
 export function isValidModel(v: unknown): v is string {
+  return typeof v === "string" && AI_MODELS.some((m) => m.value === v);
+}
+
+/** True for a real NVIDIA NIM model id (i.e. not the Gemini sentinel). */
+export function isNvidiaModel(v: unknown): v is string {
   return typeof v === "string" && NVIDIA_MODELS.some((m) => m.value === v);
 }

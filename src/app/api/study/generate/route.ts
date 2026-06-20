@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { generateObjectAI, aiErrorResponse } from "@/lib/ai/models";
+import { generateJsonAI, aiErrorResponse } from "@/lib/ai/models";
 import { isValidModel } from "@/lib/ai/catalog";
 
 export const maxDuration = 60;
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { subjectId, type, difficulty, count, customPrompt, model } = await req.json();
-  const nvidiaModel = isValidModel(model) ? model : undefined;
+  const preferred = isValidModel(model) ? model : undefined;
 
   // Ground the generation in the subject + its filed resources.
   const [{ data: subject }, { data: resources }] = await Promise.all([
@@ -72,23 +72,19 @@ export async function POST(req: Request) {
     `\nCourse materials for context:\n${materials}`;
 
     if (type === "flashcards") {
-      const object = await generateObjectAI({
+      const object = await generateJsonAI({
         schema: FlashcardsSchema,
         prompt,
-        tier: "heavy",
-        groqFallback: true,
-        maxWaitSec: 10,
-        nvidiaModel,
+        jsonShape: `{ "cards": [ { "front": "question text", "back": "answer text" } ] }  // exactly ${n} cards`,
+        preferred,
       });
       return NextResponse.json({ type, ...object });
     }
-    const object = await generateObjectAI({
+    const object = await generateJsonAI({
       schema: ExamSchema,
       prompt,
-      tier: "heavy",
-      groqFallback: true,
-      maxWaitSec: 10,
-      nvidiaModel,
+      jsonShape: `{ "questions": [ { "question": "text", "answer": "full worked solution", "points": number or null } ] }  // exactly ${n} questions`,
+      preferred,
     });
     return NextResponse.json({ type, ...object });
   } catch (err) {

@@ -140,6 +140,87 @@ export async function generateObjectAI<T>(args: ObjArgs<T>): Promise<T> {
   return runChain(models, run, maxWaitSec);
 }
 
+/** Pull the first balanced JSON value out of a model's text reply. */
+function extractJson(text: string): string {
+  let t = text.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim();
+  const start = t.search(/[{[]/);
+  if (start === -1) return t;
+  const open = t[start];
+  const close = open === "{" ? "}" : "]";
+  let depth = 0;
+  for (let i = start; i < t.length; i++) {
+    if (t[i] === open) depth++;
+    else if (t[i] === close && --depth === 0) return t.slice(start, i + 1);
+  }
+  return t.slice(start);
+}
+
+/**
+ * Structured generation that works on ANY provider — Gemini, NVIDIA NIM, Groq —
+ * by asking for plain-text JSON and parsing/validating it ourselves, instead of
+ * generateObject's tool/json-schema mode (which NVIDIA NIM and Groq reject —
+ * the "Failed to generate JSON" 500s). Honours the user's picked model: that
+ * provider goes FIRST, the rest are fallback. Deadline-bound like runChain.
+ */
+export async function generateJsonAI<T>(args: {
+  schema: z.ZodType<T>;
+  prompt: string;
+  /** Plain-language description of the exact JSON shape to return. */
+  jsonShape: string;
+  /** User-picked model id: the Gemini sentinel, an NVIDIA id, or undefined. */
+  preferred?: string;
+  maxWaitSec?: number;
+}): Promise<T> {
+  const { schema, prompt, jsonShape, preferred, maxWaitSec = 10 } = args;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const order: { label: string; model: any }[] = [];
+  const gemini = { label: `Gemini · ${HEAVY}`, model: google(HEAVY) };
+  const pushNvidia = (id: string) => nim && order.push({ label: `NVIDIA · ${id}`, model: nim(id) });
+  if (preferred && preferred !== "gemini" && nim) {
+    pushNvidia(preferred);
+    order.push(gemini);
+  } else {
+    order.push(gemini);
+    pushNvidia(NVIDIA_MODEL);
+  }
+  order.push({ label: `Groq · ${GROQ}`, model: groq(GROQ) });
+
+  const system =
+    "You output ONLY a single JSON value — no markdown fences, no commentary before or after.";
+  const full = `${prompt}\n\nReturn ONLY valid JSON matching this exact shape:\n${jsonShape}`;
+
+  const deadline = Date.now() + TOTAL_BUDGET_MS;
+  const left = () => deadline - Date.now();
+  let lastErr: unknown = new Error("No AI provider configured");
+  for (let i = 0; i < order.length; i++) {
+    if (left() < MIN_ATTEMPT_MS) break;
+    try {
+      const { text } = await generateText({
+        model: order[i].model,
+        system,
+        prompt: full,
+        maxRetries: SDK_MAX_RETRIES,
+        abortSignal: AbortSignal.timeout(Math.min(PER_ATTEMPT_MS, left())),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any);
+      const parsed = schema.safeParse(JSON.parse(extractJson(text)));
+      if (parsed.success) return parsed.data;
+      lastErr = new Error("The model's JSON didn't match the expected shape.");
+    } catch (e) {
+      lastErr = e;
+      if (i === 0 && isRateLimit(e)) {
+        const d = retryDelaySec(e);
+        if (d != null && d <= maxWaitSec && (d + 1) * 1000 < left() - MIN_ATTEMPT_MS) {
+          await sleep((d + 1) * 1000);
+        }
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export async function generateTextAI(args: {
   system?: string;
   messages?: Messages;

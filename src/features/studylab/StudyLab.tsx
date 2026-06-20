@@ -9,7 +9,7 @@ import { Modal } from "@/components/ui/Modal";
 import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { MathText } from "@/components/ui/MathText";
 import { Dropdown } from "@/components/ui/Dropdown";
-import { NVIDIA_MODELS } from "@/lib/ai/catalog";
+import { AI_MODELS } from "@/lib/ai/catalog";
 import { useAiModel } from "@/lib/ai/useAiModel";
 import { FlashcardStack } from "./FlashcardStack";
 import { loadFcStats, recordReview, todayReviews, accuracy, streak, type FcStats } from "./flashcard-stats";
@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/apiFetch";
 import { useErrorStore } from "@/stores/error-store";
 
-const MODEL_OPTIONS = NVIDIA_MODELS.map((m) => ({ value: m.value, label: m.label }));
+const MODEL_OPTIONS = AI_MODELS.map((m) => ({ value: m.value, label: m.label }));
 
 type GenType = "flashcards" | "written" | "practical";
 type Difficulty = "easy" | "medium" | "hard";
