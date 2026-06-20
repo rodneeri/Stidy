@@ -41,6 +41,14 @@ function retryDelaySec(err: unknown): number | null {
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// Hard ceiling per provider attempt. With a ~60s serverless limit and up to
+// three providers in the chain, no single slow/hung provider (NVIDIA cold
+// starts, a stalled stream) may consume the whole budget — abort and fall
+// through instead of letting the function 504. Also cap the SDK's own retry
+// backoff (we run our own provider fallback chain).
+const PER_ATTEMPT_MS = 18_000;
+const SDK_MAX_RETRIES = 1;
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Messages = any;
 function hasFilePart(messages: Messages | undefined): boolean {
@@ -104,8 +112,14 @@ export async function generateObjectAI<T>(args: ObjArgs<T>): Promise<T> {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const run = async (model: any): Promise<T> => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { object } = await generateObject({ model, schema, ...payload } as any);
+    const { object } = await generateObject({
+      model,
+      schema,
+      ...payload,
+      maxRetries: SDK_MAX_RETRIES,
+      abortSignal: AbortSignal.timeout(PER_ATTEMPT_MS),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
     return object as T;
   };
   return runChain(models, run, maxWaitSec);
@@ -137,8 +151,16 @@ export async function generateTextAI(args: {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const call = async (model: any): Promise<string> =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (await generateText({ model, system, ...payload } as any)).text;
+    (
+      await generateText({
+        model,
+        system,
+        ...payload,
+        maxRetries: SDK_MAX_RETRIES,
+        abortSignal: AbortSignal.timeout(PER_ATTEMPT_MS),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any)
+    ).text;
 
   let lastErr: unknown = new Error("No AI provider configured");
   for (let i = 0; i < chain.length; i++) {
@@ -166,6 +188,14 @@ export async function generateTextAI(args: {
 /** Turn a provider error into a clean { status, body } — friendly on rate limits. */
 export function aiErrorResponse(err: unknown): { status: number; body: { error: string } } {
   const m = err instanceof Error ? err.message : "AI request failed";
+  // Per-attempt abort (slow/hung provider) — surface as a retryable busy state,
+  // not a raw "aborted" message, and never a 504.
+  if (err instanceof Error && (err.name === "AbortError" || err.name === "TimeoutError" || /abort|timed? ?out/i.test(m))) {
+    return {
+      status: 503,
+      body: { error: "The AI took too long this time — try again, lower the count, or pick a different model in Settings." },
+    };
+  }
   if (isRateLimit(err)) {
     const retry = retryDelaySec(err);
     return {

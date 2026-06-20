@@ -77,7 +77,7 @@ export async function POST(req: Request) {
         prompt,
         tier: "heavy",
         groqFallback: true,
-        maxWaitSec: 30,
+        maxWaitSec: 10,
         nvidiaModel,
       });
       return NextResponse.json({ type, ...object });
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
       prompt,
       tier: "heavy",
       groqFallback: true,
-      maxWaitSec: 30,
+      maxWaitSec: 10,
       nvidiaModel,
     });
     return NextResponse.json({ type, ...object });
