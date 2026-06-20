@@ -19,6 +19,8 @@ import {
 import { Logo } from "@/components/brand/Logo";
 import { MeshBackground } from "@/components/layout/MeshBackground";
 import { reveal, dur, easeOut } from "@/lib/motion";
+import { THEMES } from "@/config/themes";
+import { useThemeStore } from "@/stores/theme-store";
 import { MarketingTabs, type MarketingTab } from "@/components/marketing/MarketingTabs";
 import { FAQ, type FAQItem } from "@/components/marketing/FAQ";
 import { RoadmapSection } from "@/components/marketing/RoadmapSection";
@@ -152,6 +154,37 @@ const WHY = [
     body: "Row-level security, private file storage, signed links. Only you see your work.",
   },
 ];
+
+/**
+ * Live theme preview on the landing page. Clicking a swatch re-skins the whole
+ * page immediately (setTheme writes <html data-theme> + localStorage), so the
+ * choice is already in place when the visitor signs in.
+ */
+function ThemeSwatches() {
+  const theme = useThemeStore((s) => s.theme);
+  const setTheme = useThemeStore((s) => s.setTheme);
+  return (
+    <div className="mt-3 flex flex-wrap gap-1.5">
+      {THEMES.map((t) => {
+        const active = theme === t.id;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTheme(t.id)}
+            title={t.label}
+            aria-label={`Preview ${t.label} theme`}
+            aria-pressed={active}
+            className={`pressable grid h-7 w-7 place-items-center rounded-full transition-transform hover:scale-110 ${
+              active ? "ring-2 ring-primary ring-offset-2 ring-offset-[hsl(var(--background))]" : ""
+            }`}
+            style={{ background: `linear-gradient(135deg, ${t.swatch[0]}, ${t.swatch[1]})` }}
+          />
+        );
+      })}
+    </div>
+  );
+}
 
 export function Landing() {
   const reduce = useReducedMotion();
@@ -352,6 +385,7 @@ export function Landing() {
               </span>
               <h3 className="font-bold tracking-tight">{c.title}</h3>
               <p className="text-sm text-muted">{c.body}</p>
+              {c.title === "Nine living themes" && <ThemeSwatches />}
             </motion.div>
           ))}
         </div>

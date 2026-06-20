@@ -706,6 +706,15 @@
       radial-gradient(40% 40% at 25% 85%, hsl(var(--mesh-4) / 0.4), transparent 70%);
     filter: blur(70px);
     animation: var(--animate-mesh);
+    /* Promote to its own compositor layer so the blurred bitmap is rasterized
+       once; a translate-only drift then runs on the GPU without re-blurring
+       every frame (rotate/scale used to force a full re-raster — the landing lag). */
+    will-change: transform;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mesh-bg::before {
+      animation: none;
+    }
   }
 
   .skeleton {
@@ -728,9 +737,11 @@
    8. Keyframes
    -------------------------------------------------------------------------- */
 @keyframes mesh-drift {
-  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
-  33%      { transform: translate3d(2%, -3%, 0) rotate(8deg) scale(1.08); }
-  66%      { transform: translate3d(-2%, 2%, 0) rotate(-6deg) scale(0.96); }
+  /* translate-only: keeps the ambient drift alive but lets the compositor move
+     a single cached blurred layer instead of re-rasterizing it each frame. */
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  33%      { transform: translate3d(3%, -4%, 0); }
+  66%      { transform: translate3d(-3%, 3%, 0); }
 }
 @keyframes shimmer { to { transform: translateX(100%); } }
 @keyframes float {
