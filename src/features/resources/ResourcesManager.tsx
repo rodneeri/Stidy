@@ -12,6 +12,8 @@ import {
   GripVertical,
   Pencil,
   ExternalLink,
+  Filter,
+  X,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Resource, ResourceKind } from "@/types/db";
@@ -51,7 +53,7 @@ function fmtBytes(n: number | null) {
 
 type Flight = { id: string; x0: number; y0: number; x1: number; y1: number };
 
-/** A draggable file row — drag the grip to fling it (with physics) into another folder. */
+/** A draggable, compact file row — drag the grip to fling it into another folder. */
 function FileRow({
   r,
   subjectOpts,
@@ -85,16 +87,16 @@ function FileRow({
       whileDrag={{ scale: 1.03, zIndex: 50, cursor: "grabbing" }}
       onDragEnd={(_e, info) => onDrop(r, info.point.x, info.point.y)}
       transition={{ type: "spring", stiffness: 500, damping: 32 }}
-      className="glass flex items-center gap-2 p-3"
+      className="glass flex items-center gap-2 px-2.5 py-1.5"
     >
       <button
         onPointerDown={(e) => controls.start(e)}
         className="shrink-0 cursor-grab touch-none text-muted hover:text-foreground"
         aria-label="Drag to another subject"
       >
-        <GripVertical className="h-4 w-4" />
+        <GripVertical className="h-3.5 w-3.5" />
       </button>
-      <FileText className="h-4 w-4 shrink-0 text-muted" />
+      <FileText className="h-3.5 w-3.5 shrink-0 text-muted" />
 
       {editing ? (
         <input
@@ -107,41 +109,44 @@ function FileRow({
             else setName(r.title);
           }}
           onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-          className="field min-w-0 flex-1 rounded-lg px-2 py-1 text-sm outline-none"
+          className="field min-w-0 flex-1 rounded-lg px-2 py-0.5 text-sm outline-none"
         />
       ) : (
         <button onClick={() => onOpen(r)} className="min-w-0 flex-1 truncate text-left text-sm font-medium">
           {r.title}
         </button>
       )}
+      {r.size_bytes ? (
+        <span className="hidden shrink-0 text-[11px] tabular-nums text-muted sm:inline">{fmtBytes(r.size_bytes)}</span>
+      ) : null}
 
       <button
         onClick={() => setEditing(true)}
         aria-label="Rename"
-        className="pressable hidden h-7 w-7 shrink-0 place-items-center rounded-lg text-muted hover:text-primary sm:grid"
+        className="pressable hidden h-6 w-6 shrink-0 place-items-center rounded-lg text-muted hover:text-primary sm:grid"
       >
-        <Pencil className="h-3.5 w-3.5" />
+        <Pencil className="h-3 w-3" />
       </button>
       <Dropdown
         value={r.kind}
         options={KIND_OPTS}
         onChange={(v) => onCategory(r.id, v as ResourceKind)}
-        className="hidden w-28 shrink-0 sm:block"
+        className="hidden w-24 shrink-0 sm:block"
         up
       />
       <Dropdown
         value={r.subject_id ?? ""}
         options={subjectOpts}
         onChange={(v) => onReassign(r.id, v)}
-        className="hidden w-36 shrink-0 md:block"
+        className="hidden w-32 shrink-0 md:block"
         up
       />
       <button
         onClick={() => onOpen(r)}
         aria-label="Open"
-        className="pressable grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted hover:text-primary"
+        className="pressable grid h-6 w-6 shrink-0 place-items-center rounded-lg text-muted hover:text-primary"
       >
-        <ExternalLink className="h-3.5 w-3.5" />
+        <ExternalLink className="h-3 w-3" />
       </button>
       <ConfirmDelete label="Delete resource" onConfirm={() => onDelete(r)} />
     </motion.div>
@@ -162,6 +167,10 @@ export function ResourcesManager({ initialSubject = null }: { initialSubject?: s
   const [viewing, setViewing] = useState<Resource | null>(null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
+
+  // Filters
+  const [fSubject, setFSubject] = useState("");
+  const [fKind, setFKind] = useState("");
 
   const inputRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLDivElement>(null);
@@ -332,8 +341,15 @@ export function ResourcesManager({ initialSubject = null }: { initialSubject?: s
     });
   }
 
+  const filtered = resources.filter((r) => {
+    if (fSubject === "none" && r.subject_id) return false;
+    if (fSubject && fSubject !== "none" && r.subject_id !== fSubject) return false;
+    if (fKind && r.kind !== fKind) return false;
+    return true;
+  });
+
   const bySubject = new Map<string, Resource[]>();
-  for (const r of resources) {
+  for (const r of filtered) {
     const k = r.subject_id ?? "none";
     (bySubject.get(k) ?? bySubject.set(k, []).get(k)!).push(r);
   }
@@ -342,7 +358,19 @@ export function ResourcesManager({ initialSubject = null }: { initialSubject?: s
     ...(bySubject.get("none")?.length
       ? [{ key: "none", name: "Unassigned", color: "#94a3b8", items: bySubject.get("none")! }]
       : []),
+  ].filter((f) => !fSubject || f.key === fSubject || (fSubject === "none" && f.key === "none"));
+
+  const filterSubjectOpts: Option[] = [
+    { value: "", label: "All subjects" },
+    ...subjects.filter((s) => resources.some((r) => r.subject_id === s.id)).map((s) => ({ value: s.id, label: s.name })),
+    ...(resources.some((r) => !r.subject_id) ? [{ value: "none", label: "Unassigned" }] : []),
   ];
+  const presentKinds = new Set(resources.map((r) => r.kind));
+  const filterKindOpts: Option[] = [
+    { value: "", label: "All types" },
+    ...KIND_OPTS.filter((o) => presentKinds.has(o.value as ResourceKind)),
+  ];
+  const filtersActive = !!(fSubject || fKind);
 
   if (loading) return null;
 
@@ -414,14 +442,36 @@ export function ResourcesManager({ initialSubject = null }: { initialSubject?: s
         )}
       </div>
 
+      {/* Filters */}
+      {resources.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
+            <Filter className="h-3.5 w-3.5" /> Filter
+          </span>
+          <Dropdown value={fSubject} options={filterSubjectOpts} onChange={setFSubject} className="w-40" />
+          <Dropdown value={fKind} options={filterKindOpts} onChange={setFKind} className="w-36" />
+          {filtersActive && (
+            <button
+              onClick={() => {
+                setFSubject("");
+                setFKind("");
+              }}
+              className="pressable flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted hover:text-primary"
+            >
+              <X className="h-3 w-3" /> Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {!hasSubjects ? (
-        resources.length === 0 ? (
+        filtered.length === 0 ? (
           <EmptyState icon={<FileText className="h-6 w-6" />} title="No resources yet">
             Drop a file above and STiDY will auto-file it by type and subject.
           </EmptyState>
         ) : (
-          <div className="space-y-2">
-            {resources.map((r) => (
+          <div className="space-y-1.5">
+            {filtered.map((r) => (
               <FileRow
                 key={r.id}
                 r={r}
@@ -436,8 +486,12 @@ export function ResourcesManager({ initialSubject = null }: { initialSubject?: s
             ))}
           </div>
         )
+      ) : folders.length === 0 ? (
+        <EmptyState icon={<Filter className="h-6 w-6" />} title="Nothing matches">
+          Try clearing the filters above.
+        </EmptyState>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {folders.map((folder) => {
             const isOpen = expanded.has(folder.key);
             const byKind = KINDS.map((k) => ({ k, items: folder.items.filter((r) => r.kind === k) })).filter(
@@ -451,37 +505,37 @@ export function ResourcesManager({ initialSubject = null }: { initialSubject?: s
                 }}
                 className="glass p-0"
               >
-                <button onClick={() => toggle(folder.key)} className="flex w-full items-center gap-3 p-4 text-left">
+                <button onClick={() => toggle(folder.key)} className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left">
                   {folder.key === "none" ? (
                     <span
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-white"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white"
                       style={{ background: folder.color }}
                     >
-                      <Folder className="h-5 w-5" />
+                      <Folder className="h-4 w-4" />
                     </span>
                   ) : (
-                    <SubjectIcon id={folder.key} color={folder.color} size="lg" className="h-11 w-11 rounded-xl text-xl" />
+                    <SubjectIcon id={folder.key} color={folder.color} size="md" className="h-8 w-8 rounded-lg text-base" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{folder.name}</p>
-                    <div className="mt-1 flex flex-wrap gap-1.5">
+                    <p className="truncate text-sm font-medium">{folder.name}</p>
+                    <div className="mt-0.5 flex flex-wrap gap-1">
                       {byKind.length ? (
                         byKind.map(({ k, items }) => (
                           <span
                             key={k}
-                            className={cn("rounded-full px-2 py-0.5 text-xs font-medium capitalize", KIND_STYLE[k])}
+                            className={cn("rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize", KIND_STYLE[k])}
                           >
                             {k} {items.length}
                           </span>
                         ))
                       ) : (
-                        <span className="text-xs text-muted">Empty</span>
+                        <span className="text-[11px] text-muted">Empty</span>
                       )}
                     </div>
                   </div>
-                  <span className="shrink-0 text-sm tabular-nums text-muted">{folder.items.length}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-muted">{folder.items.length}</span>
                   <ChevronDown
-                    className={cn("h-4 w-4 shrink-0 text-muted transition-transform", isOpen && "rotate-180")}
+                    className={cn("h-3.5 w-3.5 shrink-0 text-muted transition-transform", isOpen && "rotate-180")}
                   />
                 </button>
 
@@ -497,7 +551,7 @@ export function ResourcesManager({ initialSubject = null }: { initialSubject?: s
                       }
                       style={{ overflow: settled.has(folder.key) ? "visible" : "hidden" }}
                     >
-                      <div className="space-y-2 border-t border-border/60 p-3">
+                      <div className="space-y-1.5 border-t border-border/60 p-2.5">
                         {folder.items.length === 0 ? (
                           <p className="p-2 text-sm text-muted">No documents yet.</p>
                         ) : (

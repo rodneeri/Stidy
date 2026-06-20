@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Sparkles, Loader2, Layers, FileText, Pencil, Check, Flame, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Loader2, Layers, FileText, Pencil, Check, Flame, Eye, EyeOff, ArrowLeft, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Flashcard } from "@/types/db";
 import { Modal } from "@/components/ui/Modal";
@@ -13,6 +13,16 @@ import { NVIDIA_MODELS } from "@/lib/ai/catalog";
 import { useAiModel } from "@/lib/ai/useAiModel";
 import { FlashcardStack } from "./FlashcardStack";
 import { loadFcStats, recordReview, todayReviews, accuracy, streak, type FcStats } from "./flashcard-stats";
+import {
+  loadSets,
+  createSet,
+  renameSet,
+  deleteSet,
+  recordSetCompletion,
+  pruneCardId,
+  avgScore,
+  type FcSet,
+} from "./flashcard-sets";
 import { useSubjectIcons } from "@/lib/subject-icons";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/apiFetch";
@@ -57,6 +67,11 @@ const TYPES: { id: GenType; label: string; hint: string }[] = [
   { id: "practical", label: "Practical Exam", hint: "Problems with worked solutions" },
 ];
 const DIFFS: Difficulty[] = ["easy", "medium", "hard"];
+const DIFF_STYLE: Record<Difficulty, string> = {
+  easy: "bg-success/15 text-success",
+  medium: "bg-warning/15 text-warning",
+  hard: "bg-danger/15 text-danger",
+};
 const field = "field w-full rounded-lg px-3 py-2 text-sm outline-none placeholder:text-muted";
 
 export function StudyLab({ initialSubject = null }: { initialSubject?: string | null }) {
@@ -65,6 +80,8 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
   const [subjects, setSubjects] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [cards, setCards] = useState<Flashcard[]>([]);
+  const [sets, setSets] = useState<FcSet[]>([]);
+  const [openSetId, setOpenSetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,12 +99,16 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
   const [history, setHistory] = useState<SavedExam[]>([]);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const [renamingSetId, setRenamingSetId] = useState<string | null>(null);
+  const [setNameDraft, setSetNameDraft] = useState("");
   const [reviewing, setReviewing] = useState(false);
   const [reviewQueue, setReviewQueue] = useState<Flashcard[]>([]);
   const [reviewIdx, setReviewIdx] = useState(0);
   const [showAns, setShowAns] = useState(false);
+  const [reviewGood, setReviewGood] = useState(0);
   const [fcStats, setFcStats] = useState<FcStats | null>(null);
   const icons = useSubjectIcons();
+  const reviewSetId = useRef<string | null>(null);
 
   async function loadCards(id: string) {
     const { data } = await supabase
@@ -119,12 +140,25 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
+  // Reset per-subject local view state when the selected subject changes.
+  // Derived during render (guarded by state, not an effect) for the
+  // synchronous resets; `loadCards` stays in an effect since it's an async
+  // fetch from Supabase (a genuine external-system sync).
+  const [loadedForSubject, setLoadedForSubject] = useState<string | null>(null);
+  if (selectedId && loadedForSubject !== selectedId) {
+    setLoadedForSubject(selectedId);
+    setOpenExam(null);
+    setHistory(loadExamHistory(selectedId));
+    setSets(loadSets(selectedId));
+    setOpenSetId(null);
+  }
+
   useEffect(() => {
-    if (selectedId) {
-      loadCards(selectedId);
-      setOpenExam(null);
-      setHistory(loadExamHistory(selectedId));
-    }
+    // loadCards is an async Supabase fetch (a genuine external-system sync);
+    // its setCards call happens after an await, but the lint rule flags the
+    // call site itself since it can't see through the async boundary.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (selectedId) loadCards(selectedId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
@@ -162,7 +196,15 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
           back: c.back,
           source: "ai_generated",
         }));
-        await supabase.from("flashcards").insert(rows);
+        const { data: inserted } = await supabase.from("flashcards").insert(rows).select("id");
+        const ids = ((inserted as { id: string }[] | null) ?? []).map((r) => r.id);
+        if (ids.length) {
+          const subjectName = subjects.find((s) => s.id === selectedId)?.name ?? "Set";
+          const ordinal = loadSets(selectedId).length + 1;
+          const name = opts.prompt.trim() ? opts.prompt.trim().slice(0, 40) : `${subjectName} set ${ordinal}`;
+          createSet(selectedId, name, ids, opts.difficulty);
+          setSets(loadSets(selectedId));
+        }
         await loadCards(selectedId);
       } else {
         const qs = json.questions as ExamQ[];
@@ -190,16 +232,31 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
 
   async function deleteCard(id: string) {
     await supabase.from("flashcards").delete().eq("id", id);
-    if (selectedId) await loadCards(selectedId);
+    if (selectedId) {
+      await loadCards(selectedId);
+      setSets(pruneCardId(selectedId, id));
+    }
   }
+
+  const UNSORTED = "unsorted";
+  const setCardIds = new Set(sets.flatMap((s) => s.cardIds));
+  const unsortedCards = cards.filter((c) => !setCardIds.has(c.id));
+  const activeSet = openSetId === UNSORTED ? null : sets.find((s) => s.id === openSetId) ?? null;
+  const visibleCards = openSetId
+    ? openSetId === UNSORTED
+      ? unsortedCards
+      : cards.filter((c) => activeSet?.cardIds.includes(c.id))
+    : cards;
 
   function startReview() {
     const today = new Date().toISOString().slice(0, 10);
-    const due = cards.filter((c) => !c.due_date || c.due_date <= today);
+    const due = visibleCards.filter((c) => !c.due_date || c.due_date <= today);
     if (due.length === 0) return;
+    reviewSetId.current = openSetId;
     setReviewQueue(due);
     setReviewIdx(0);
     setShowAns(false);
+    setReviewGood(0);
     setReviewing(true);
   }
 
@@ -231,11 +288,18 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
       .eq("id", card.id);
 
     setFcStats(recordReview(quality));
+    const good = quality !== "again";
 
     if (reviewIdx + 1 < reviewQueue.length) {
+      setReviewGood((g) => g + (good ? 1 : 0));
       setReviewIdx(reviewIdx + 1);
       setShowAns(false);
     } else {
+      const finalGood = reviewGood + (good ? 1 : 0);
+      const pct = Math.round((finalGood / reviewQueue.length) * 100);
+      if (selectedId && reviewSetId.current && reviewSetId.current !== UNSORTED) {
+        setSets(recordSetCompletion(selectedId, reviewSetId.current, pct));
+      }
       setReviewing(false);
       if (selectedId) await loadCards(selectedId);
     }
@@ -261,6 +325,23 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
     setRenamingId(null);
   }
 
+  function doRenameSet(setId: string, name: string) {
+    if (!selectedId || !name.trim()) {
+      setRenamingSetId(null);
+      return;
+    }
+    setSets(renameSet(selectedId, setId, name.trim()));
+    setRenamingSetId(null);
+  }
+  async function doDeleteSet(setId: string) {
+    if (!selectedId) return;
+    setSets(deleteSet(selectedId, setId));
+    if (openSetId === setId) setOpenSetId(null);
+    // Deleting a set is a grouping-only action — the underlying cards stay,
+    // and fall back into "Unsorted" automatically since they're no longer
+    // referenced by any set's cardIds.
+  }
+
   async function updateCard(id: string, front: string, back: string) {
     await supabase.from("flashcards").update({ front, back }).eq("id", id);
     if (selectedId) await loadCards(selectedId);
@@ -269,10 +350,11 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
     if (!selectedId) return;
     await supabase.from("flashcards").delete().eq("subject_id", selectedId);
     await loadCards(selectedId);
+    setSets(loadSets(selectedId).map((s) => ({ ...s, cardIds: [] })));
   }
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const dueCount = cards.filter((c) => !c.due_date || c.due_date <= todayStr).length;
+  const dueCount = visibleCards.filter((c) => !c.due_date || c.due_date <= todayStr).length;
 
   if (loading) return <div className="skeleton h-72 w-full" />;
 
@@ -382,13 +464,26 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
             </div>
           )}
 
-          {/* Flashcard deck — visual stack */}
+          {/* Flashcard sets grid, or the open set's stack */}
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2 px-1">
               <div className="flex items-center gap-2">
+                {openSetId && (
+                  <button
+                    onClick={() => setOpenSetId(null)}
+                    aria-label="Back to sets"
+                    className="pressable grid h-7 w-7 place-items-center rounded-lg text-muted hover:text-primary"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                )}
                 <Layers className="h-4 w-4 text-primary" />
-                <h2 className="font-semibold">Flashcards</h2>
-                <span className="text-xs text-muted tabular-nums">{cards.length}</span>
+                <h2 className="font-semibold">
+                  {openSetId ? (openSetId === UNSORTED ? "Unsorted" : activeSet?.name ?? "Set") : "Flashcard sets"}
+                </h2>
+                <span className="text-xs text-muted tabular-nums">
+                  {openSetId ? visibleCards.length : cards.length}
+                </span>
               </div>
               {dueCount > 0 && (
                 <button onClick={startReview} className="neu-btn px-3 py-1.5 text-xs font-medium text-primary">
@@ -418,10 +513,85 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
               <p className="py-6 text-center text-sm text-muted">
                 No cards yet — hit Generate and choose Flashcards.
               </p>
+            ) : !openSetId ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {sets.map((s) => {
+                  const avg = avgScore(s);
+                  const count = s.cardIds.filter((id) => cards.some((c) => c.id === id)).length;
+                  return (
+                    <div key={s.id} className="glass space-y-2.5 p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        {renamingSetId === s.id ? (
+                          <input
+                            autoFocus
+                            value={setNameDraft}
+                            onChange={(e) => setSetNameDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") doRenameSet(s.id, setNameDraft);
+                              if (e.key === "Escape") setRenamingSetId(null);
+                            }}
+                            onBlur={() => doRenameSet(s.id, setNameDraft)}
+                            className="field min-w-0 flex-1 rounded-lg px-2 py-1 text-sm font-medium outline-none"
+                          />
+                        ) : (
+                          <button
+                            onClick={() => setOpenSetId(s.id)}
+                            className="min-w-0 flex-1 truncate text-left text-sm font-semibold hover:text-primary"
+                          >
+                            {s.name}
+                          </button>
+                        )}
+                        <div className="flex shrink-0 items-center gap-0.5">
+                          <button
+                            onClick={() => {
+                              setSetNameDraft(s.name);
+                              setRenamingSetId(renamingSetId === s.id ? null : s.id);
+                            }}
+                            aria-label="Rename set"
+                            className="pressable grid h-6 w-6 place-items-center rounded-lg text-muted hover:text-primary"
+                          >
+                            {renamingSetId === s.id ? <Check className="h-3.5 w-3.5" /> : <Pencil className="h-3 w-3" />}
+                          </button>
+                          <ConfirmDelete label="Delete set" onConfirm={() => doDeleteSet(s.id)} />
+                        </div>
+                      </div>
+                      <button onClick={() => setOpenSetId(s.id)} className="block w-full text-left">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10px] font-medium capitalize",
+                              DIFF_STYLE[s.difficulty],
+                            )}
+                          >
+                            {s.difficulty}
+                          </span>
+                          <span className="text-xs text-muted">{count} cards</span>
+                        </div>
+                        <div className="mt-2 flex items-center gap-3 text-xs text-muted">
+                          <span>{s.completions} completed</span>
+                          <span className="flex items-center gap-1">
+                            <Trophy className="h-3 w-3" />
+                            {avg != null ? `${avg}% avg` : "—"}
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+                {unsortedCards.length > 0 && (
+                  <button
+                    onClick={() => setOpenSetId(UNSORTED)}
+                    className="glass space-y-2.5 p-4 text-left hover:text-primary"
+                  >
+                    <p className="text-sm font-semibold">Unsorted</p>
+                    <p className="text-xs text-muted">{unsortedCards.length} cards · no set</p>
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="py-4">
                 <FlashcardStack
-                  cards={cards}
+                  cards={visibleCards}
                   onUpdate={updateCard}
                   onDelete={deleteCard}
                   onDeleteAll={deleteAllCards}
