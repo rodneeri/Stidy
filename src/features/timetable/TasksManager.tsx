@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence } from "framer-motion";
-import { Plus, X, AlertTriangle, Copy, Check, CalendarDays } from "lucide-react";
+import { Plus, X, AlertTriangle, Copy, Check, CalendarDays, Filter } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import type { Task, TaskPriority } from "@/types/db";
+import type { Career, Task, TaskPriority } from "@/types/db";
 import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { Modal } from "@/components/ui/Modal";
-import { Dropdown } from "@/components/ui/Dropdown";
+import { Dropdown, type Option } from "@/components/ui/Dropdown";
 import { DateTimePicker } from "@/components/ui/DateTimePicker";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { FadeIn } from "@/components/motion/FadeIn";
@@ -79,15 +79,15 @@ const GROUPS: { key: string; label: string }[] = [
   { key: "done", label: "Completed" },
 ];
 
-function bucket(t: Task): string {
+function bucket(t: Task, now: number): string {
   if (t.status === "done") return "done";
   if (!t.due_at) return "someday";
   const ms = new Date(t.due_at).getTime();
-  const start = new Date();
+  const start = new Date(now);
   start.setHours(0, 0, 0, 0);
   const endToday = start.getTime() + 86400000;
   const endWeek = start.getTime() + 7 * 86400000;
-  if (ms < Date.now()) return "overdue";
+  if (ms < now) return "overdue";
   if (ms < endToday) return "today";
   if (ms < endWeek) return "week";
   return "later";
@@ -104,14 +104,18 @@ function fmtDue(iso: string | null) {
   });
 }
 
+type SubjectLite = { id: string; name: string; career_id: string | null };
+
 export function TasksManager({ filterSubject = null }: { filterSubject?: string | null }) {
   const supabase = useMemo(() => createClient(), []);
   const icons = useSubjectIcons();
   const [userId, setUserId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
+  const [subjects, setSubjects] = useState<SubjectLite[]>([]);
+  const [careers, setCareers] = useState<Career[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [form, setForm] = useState({
     title: "",
     due: "",
@@ -123,13 +127,20 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
   const [showEmail, setShowEmail] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Filters
+  const [fSubject, setFSubject] = useState("");
+  const [fCareer, setFCareer] = useState("");
+  const [fType, setFType] = useState("");
+
   async function load() {
-    const [{ data: t }, { data: s }] = await Promise.all([
+    const [{ data: t }, { data: s }, { data: c }] = await Promise.all([
       supabase.from("tasks").select("*").neq("status", "archived").order("due_at", { ascending: true }),
-      supabase.from("subjects").select("id, name").is("parent_id", null).order("name"),
+      supabase.from("subjects").select("id, name, career_id").is("parent_id", null).order("name"),
+      supabase.from("careers").select("*").order("position", { ascending: true }),
     ]);
     setTasks((t as Task[]) ?? []);
-    setSubjects((s as { id: string; name: string }[]) ?? []);
+    setSubjects((s as SubjectLite[]) ?? []);
+    setCareers((c as Career[]) ?? []);
   }
 
   useEffect(() => {
@@ -144,10 +155,21 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase]);
 
-  // Preselect the subject when deep-linked from Subjects.
+  // Refresh the "now" reference once a minute so overdue/bucket calculations
+  // stay correct without recomputing Date.now() during render (impure).
   useEffect(() => {
-    if (filterSubject) setForm((f) => ({ ...f, subjectId: filterSubject }));
-  }, [filterSubject]);
+    const id = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Preselect the subject when deep-linked from Subjects. Derived from props
+  // during render (guarded by a ref) instead of calling setState in an
+  // effect body.
+  const appliedFilterSubject = useRef<string | null>(null);
+  if (filterSubject && appliedFilterSubject.current !== filterSubject) {
+    appliedFilterSubject.current = filterSubject;
+    setForm((f) => ({ ...f, subjectId: filterSubject }));
+  }
 
   async function add() {
     if (!form.title.trim() || !userId) return;
@@ -164,6 +186,7 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
     // Graceful: works before the `category` column migration too.
     if (e && /category/i.test(e.message)) {
       const { category: _omit, ...rest } = payload;
+      void _omit;
       ({ error: e } = await supabase.from("tasks").insert(rest));
     }
     if (e) return setError(e.message);
@@ -185,11 +208,22 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
   }
 
   const subjectName = (id: string | null) => subjects.find((s) => s.id === id)?.name;
-  const now = Date.now();
-  const visible = filterSubject ? tasks.filter((t) => t.subject_id === filterSubject) : tasks;
+  const subjectCareer = (id: string | null) => subjects.find((s) => s.id === id)?.career_id ?? null;
+  const careerName = (id: string | null) => careers.find((c) => c.id === id)?.name;
+
+  const bySubject = filterSubject ? tasks.filter((t) => t.subject_id === filterSubject) : tasks;
+  const visible = bySubject.filter((t) => {
+    if (fSubject && t.subject_id !== fSubject) return false;
+    if (fCareer && subjectCareer(t.subject_id) !== fCareer) return false;
+    if (fType) {
+      const cat = t.category ?? (t.is_exam ? "exam" : "task");
+      if (cat !== fType) return false;
+    }
+    return true;
+  });
   const grouped = GROUPS.map((g) => ({
     ...g,
-    items: visible.filter((t) => bucket(t) === g.key),
+    items: visible.filter((t) => bucket(t, now) === g.key),
   })).filter((g) => g.items.length);
 
   // Exam-conflict defusal: 2+ exams/quizzes within a 2-day window.
@@ -217,38 +251,58 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
 
   const subjectOpts = [{ value: "", label: "No subject" }, ...subjects.map((s) => ({ value: s.id, label: s.name }))];
 
+  // Filter dropdown options — only show choices that are actually present.
+  const filterSubjectOpts: Option[] = [
+    { value: "", label: "All subjects" },
+    ...subjects
+      .filter((s) => bySubject.some((t) => t.subject_id === s.id))
+      .map((s) => ({ value: s.id, label: s.name })),
+  ];
+  const filterCareerOpts: Option[] = [
+    { value: "", label: "All careers" },
+    ...careers
+      .filter((c) => bySubject.some((t) => subjectCareer(t.subject_id) === c.id))
+      .map((c) => ({ value: c.id, label: c.name })),
+  ];
+  const presentTypes = new Set(bySubject.map((t) => t.category ?? (t.is_exam ? "exam" : "task")));
+  const filterTypeOpts: Option[] = [
+    { value: "", label: "All types" },
+    ...CAT_OPTS.filter((o) => presentTypes.has(o.value)),
+  ];
+  const filtersActive = !!(fSubject || fCareer || fType);
+
   const taskRow = (t: Task) => {
     const done = t.status === "done";
     const overdue = !done && t.due_at && new Date(t.due_at).getTime() < now;
     return (
-      <div key={t.id} className="glass flex items-center gap-3 p-4">
+      <div key={t.id} className="glass flex items-center gap-2.5 px-3 py-2">
         <button
           onClick={() => toggle(t)}
           aria-label={done ? "Mark not done" : "Mark done"}
           className={cn(
-            "group/c grid h-6 w-6 shrink-0 cursor-pointer place-items-center rounded-full border-2 transition-all hover:scale-110 active:scale-90",
+            "group/c grid h-5 w-5 shrink-0 cursor-pointer place-items-center rounded-full border-2 transition-all hover:scale-110 active:scale-90",
             done
               ? "border-primary bg-primary text-primary-foreground"
               : "border-border hover:border-primary hover:shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]",
           )}
         >
           {done ? (
-            <span className="text-xs">✓</span>
+            <span className="text-[10px]">✓</span>
           ) : (
-            <span className="text-xs text-primary opacity-0 transition-opacity group-hover/c:opacity-60">✓</span>
+            <span className="text-[10px] text-primary opacity-0 transition-opacity group-hover/c:opacity-60">✓</span>
           )}
         </button>
-        <span className={cn("h-2 w-2 shrink-0 rounded-full", PRIO_DOT[t.priority])} title={t.priority} />
+        <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", PRIO_DOT[t.priority])} title={t.priority} />
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <p className={cn("truncate font-medium", done && "text-muted line-through")}>{t.title}</p>
+          <div className="flex items-center gap-1.5">
+            <p className={cn("truncate text-sm font-medium", done && "text-muted line-through")}>{t.title}</p>
             {(() => {
               const cat = t.category ?? (t.is_exam ? "exam" : "task");
               if (cat === "task") return null;
               return (
                 <span
                   className={cn(
-                    "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize",
+                    "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize",
                     CAT_STYLE[cat] ?? CAT_STYLE.task,
                   )}
                 >
@@ -257,7 +311,7 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
               );
             })()}
           </div>
-          <p className={cn("truncate text-xs", overdue ? "text-danger" : "text-muted")}>
+          <p className={cn("truncate text-[11px]", overdue ? "text-danger" : "text-muted")}>
             {fmtDue(t.due_at) ?? "No date"}
             {subjectName(t.subject_id)
               ? ` · ${t.subject_id && icons[t.subject_id] ? icons[t.subject_id] + " " : ""}${subjectName(t.subject_id)}`
@@ -345,6 +399,30 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
         </div>
       </div>
 
+      {/* Filters */}
+      {bySubject.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 text-xs font-medium text-muted">
+            <Filter className="h-3.5 w-3.5" /> Filter
+          </span>
+          <Dropdown value={fSubject} options={filterSubjectOpts} onChange={setFSubject} className="w-40" />
+          <Dropdown value={fCareer} options={filterCareerOpts} onChange={setFCareer} className="w-40" />
+          <Dropdown value={fType} options={filterTypeOpts} onChange={setFType} className="w-36" />
+          {filtersActive && (
+            <button
+              onClick={() => {
+                setFSubject("");
+                setFCareer("");
+                setFType("");
+              }}
+              className="pressable flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-muted hover:text-primary"
+            >
+              <X className="h-3 w-3" /> Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Exam-conflict defusal — subtle inline warning, not a card */}
       {conflict.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 bg-warning/15 px-3 py-2 text-sm text-foreground">
@@ -365,18 +443,18 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
       {/* Grouped list */}
       {visible.length === 0 ? (
         <EmptyState icon={<CalendarDays className="h-6 w-6" />} title="Nothing scheduled yet">
-          {filterSubject
-            ? "Nothing for this subject yet."
+          {filterSubject || filtersActive
+            ? "Nothing matches the current filters."
             : "Add a task or exam above — they power your dashboard's next exam and what's next."}
         </EmptyState>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-5">
           {grouped.map((g) => (
-            <FadeIn key={g.key} className="space-y-2">
+            <FadeIn key={g.key} className="space-y-1.5">
               <div className="flex items-center gap-2 px-1">
                 <h2
                   className={cn(
-                    "text-sm font-semibold",
+                    "text-xs font-semibold uppercase tracking-wide",
                     g.key === "overdue" && "text-danger",
                     g.key === "done" && "text-muted",
                   )}
@@ -385,7 +463,7 @@ export function TasksManager({ filterSubject = null }: { filterSubject?: string 
                 </h2>
                 <span className="text-xs tabular-nums text-muted">{g.items.length}</span>
               </div>
-              <Stagger className={cn("space-y-2", g.key === "done" && "opacity-60")}>
+              <Stagger className={cn("space-y-1.5", g.key === "done" && "opacity-60")}>
                 <AnimatePresence>
                   {g.items.map((t) => (
                     <StaggerItem key={t.id}>{taskRow(t)}</StaggerItem>
