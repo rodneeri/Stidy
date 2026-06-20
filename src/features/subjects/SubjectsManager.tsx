@@ -165,7 +165,7 @@ export function SubjectsManager() {
   const card = (s: Subject, opts?: { archived?: boolean }) => (
     <div key={s.id} className="glass group flex h-full flex-col gap-4 p-5">
       <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-3">
+        <Link href={`/subjects/${s.id}`} className="group/link flex min-w-0 items-center gap-3">
           <span
             className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white"
             style={{ background: s.color ?? COLORS[0] }}
@@ -177,14 +177,14 @@ export function SubjectsManager() {
             )}
           </span>
           <div className="min-w-0">
-            <h3 className="truncate font-semibold">{s.name}</h3>
+            <h3 className="truncate font-semibold group-hover/link:text-primary">{s.name}</h3>
             {[s.code, s.professor].filter(Boolean).length > 0 && (
               <p className="truncate text-xs text-muted">
                 {[s.code, s.professor].filter(Boolean).join(" · ")}
               </p>
             )}
           </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-1">
           {opts?.archived ? (
             <button
