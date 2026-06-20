@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Archive,
   ArchiveRestore,
+  Clock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Subject, Career } from "@/types/db";
@@ -26,7 +27,12 @@ import { useGradeScale, formatGrade } from "@/lib/grade-scale";
 import { useSubjectIcons, setSubjectIcon } from "@/lib/subject-icons";
 import { cn } from "@/lib/utils";
 
-const COLORS = ["#14b8a6", "#3b82f6", "#f59e0b", "#22c55e", "#ec4899", "#8b5cf6", "#06b6d4", "#ef4444"];
+const COLORS = [
+  "#14b8a6", "#3b82f6", "#f59e0b", "#22c55e", "#ec4899", "#8b5cf6", "#06b6d4", "#ef4444",
+  "#10b981", "#6366f1", "#eab308", "#f43f5e", "#0ea5e9", "#a855f7", "#84cc16", "#fb7185",
+  "#f97316", "#64748b",
+];
+const studyHrs = (s: number) => (s >= 36000 ? `${Math.round(s / 3600)}h` : `${(s / 3600).toFixed(1)}h`);
 const field = "field w-full rounded-lg px-3 py-2 text-sm outline-none placeholder:text-muted";
 
 type Draft = Partial<Subject> & { name: string };
@@ -49,6 +55,7 @@ export function SubjectsManager() {
   const [userId, setUserId] = useState<string | null>(null);
   const [careers, setCareers] = useState<Career[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [studyTime, setStudyTime] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -59,12 +66,18 @@ export function SubjectsManager() {
   const icons = useSubjectIcons();
 
   async function load() {
-    const [{ data: cs }, { data: ss }] = await Promise.all([
+    const [{ data: cs }, { data: ss }, { data: logs }] = await Promise.all([
       supabase.from("careers").select("*").order("position", { ascending: true }).order("name"),
       supabase.from("subjects").select("*").is("parent_id", null).order("created_at"),
+      supabase.from("study_logs").select("subject_id, duration_seconds").eq("kind", "focus"),
     ]);
     setCareers((cs as Career[]) ?? []);
     setSubjects((ss as Subject[]) ?? []);
+    const bySubject: Record<string, number> = {};
+    for (const r of (logs as { subject_id: string | null; duration_seconds: number }[]) ?? []) {
+      if (r.subject_id) bySubject[r.subject_id] = (bySubject[r.subject_id] ?? 0) + r.duration_seconds;
+    }
+    setStudyTime(bySubject);
   }
 
   useEffect(() => {
@@ -199,11 +212,19 @@ export function SubjectsManager() {
       </div>
 
       <div className="mt-auto space-y-3">
-        <div>
-          <p className="text-xs text-muted">Current grade</p>
-          <p className="text-2xl font-semibold tabular-nums">
-            {formatGrade(s.current_grade == null ? null : Number(s.current_grade), scale)}
-          </p>
+        <div className="flex items-end justify-between gap-2">
+          <div>
+            <p className="text-xs text-muted">Current grade</p>
+            <p className="text-2xl font-semibold tabular-nums">
+              {formatGrade(s.current_grade == null ? null : Number(s.current_grade), scale)}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="flex items-center justify-end gap-1 text-xs text-muted">
+              <Clock className="h-3 w-3" /> Studied
+            </p>
+            <p className="text-lg font-semibold tabular-nums">{studyHrs(studyTime[s.id] ?? 0)}</p>
+          </div>
         </div>
         {!opts?.archived && (
           <div className="flex gap-1.5">
