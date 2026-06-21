@@ -140,6 +140,44 @@ export async function generateObjectAI<T>(args: ObjArgs<T>): Promise<T> {
   return runChain(models, run, maxWaitSec);
 }
 
+/**
+ * Repair invalid JSON from a model that emitted LaTeX with UNescaped backslashes
+ * (`\frac`, `\pm`, `\sqrt`…) — the #1 cause of exam/flashcard generation failing
+ * with "Bad escaped character in JSON". Only call this AFTER a strict JSON.parse
+ * has already failed: at that point every backslash means a literal (LaTeX)
+ * backslash, so we escape them all (keeping only the structural `\"`), and also
+ * escape literal control chars, which are illegal inside JSON strings. We never
+ * run this on output that parsed cleanly (e.g. Gemini's properly-escaped JSON),
+ * so correctly-escaped sequences are left untouched.
+ */
+function repairJsonStrings(s: string): string {
+  let out = "";
+  let inString = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (!inString) {
+      out += ch;
+      if (ch === '"') inString = true;
+      continue;
+    }
+    if (ch === "\\") {
+      if (s[i + 1] === '"') {
+        out += '\\"';
+        i++;
+      } else {
+        out += "\\\\";
+      }
+    } else if (ch === '"') {
+      inString = false;
+      out += ch;
+    } else if (ch === "\n") out += "\\n";
+    else if (ch === "\r") out += "\\r";
+    else if (ch === "\t") out += "\\t";
+    else out += ch;
+  }
+  return out;
+}
+
 /** Pull the first balanced JSON value out of a model's text reply. */
 function extractJson(text: string): string {
   let t = text.trim();
@@ -223,8 +261,15 @@ export async function generateJsonAI<T>(args: {
       try {
         json = JSON.parse(candidate);
       } catch {
-        lastErr = new Error(`${order[i].label} returned malformed JSON.`);
-        continue;
+        // Models routinely emit LaTeX (\frac, \pm…) with unescaped backslashes,
+        // which is invalid JSON. Repair and retry before giving up on this
+        // provider — this is what was turning every maths exam into a 503.
+        try {
+          json = JSON.parse(repairJsonStrings(candidate));
+        } catch {
+          lastErr = new Error(`${order[i].label} returned malformed JSON.`);
+          continue;
+        }
       }
       const parsed = schema.safeParse(json);
       if (parsed.success) return parsed.data;
