@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { generateJsonAI, aiErrorResponse } from "@/lib/ai/models";
+import { buildResourceContext } from "@/lib/ai/resource-content";
 import { isValidModel } from "@/lib/ai/catalog";
 
 export const maxDuration = 60;
@@ -45,27 +46,22 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { subjectId, type, difficulty, count, customPrompt, model, problem } = await req.json();
+  const { subjectId, type, difficulty, count, customPrompt, model, problem, resourceIds } =
+    await req.json();
   const preferred = isValidModel(model) ? model : undefined;
 
-  // Ground the generation in the subject + its filed resources.
-  const [{ data: subject }, { data: resources }] = await Promise.all([
-    supabase.from("subjects").select("name, code").eq("id", subjectId).maybeSingle(),
-    supabase
-      .from("resources")
-      .select("title, kind, meta")
-      .eq("subject_id", subjectId)
-      .limit(40),
-  ]);
-
+  // Ground the generation in the subject + the ACTUAL text of its filed resources
+  // (not just titles), so it can genuinely study/solve from the materials.
+  const { data: subject } = await supabase
+    .from("subjects")
+    .select("name, code")
+    .eq("id", subjectId)
+    .maybeSingle();
   const subjectName = subject?.name ?? "this course";
-  const materials =
-    (resources ?? [])
-      .map(
-        (r: { title: string; kind: string; meta: { summary?: string } | null }) =>
-          `- [${r.kind}] ${r.title}${r.meta?.summary ? ` — ${r.meta.summary}` : ""}`,
-      )
-      .join("\n") || "(no uploaded materials yet)";
+  const materials = await buildResourceContext(supabase, {
+    subjectId,
+    resourceIds: Array.isArray(resourceIds) ? resourceIds : undefined,
+  });
 
   // Solver mode: no difficulty/count — a fixed problem statement to work through.
   if (type === "solver") {

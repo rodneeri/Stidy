@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextAI, aiErrorResponse } from "@/lib/ai/models";
+import { buildResourceContext } from "@/lib/ai/resource-content";
 import { isValidModel } from "@/lib/ai/catalog";
 
 export const maxDuration = 60;
@@ -20,7 +21,7 @@ export async function POST(req: Request) {
 
   const { messages, model } = await req.json();
 
-  const [subjectsRes, structRes, gradesRes, tasksRes, resourcesRes] = await Promise.all([
+  const [subjectsRes, structRes, gradesRes, tasksRes, resList] = await Promise.all([
     supabase.from("subjects").select("id, name, code, professor, current_grade").is("parent_id", null),
     supabase.from("grading_structures").select("subject_id, categories"),
     supabase.from("grades").select("subject_id, category_id, title, score, max_score, weight"),
@@ -29,7 +30,9 @@ export async function POST(req: Request) {
       .select("title, due_at, is_exam, category, subject_id")
       .neq("status", "done")
       .order("due_at"),
-    supabase.from("resources").select("title, kind, subject_id, url, meta"),
+    // Real file content (budgeted), not just titles — so the assistant can answer
+    // FROM the materials, not just point at them.
+    buildResourceContext(supabase, {}),
   ]);
 
   const subjects = subjectsRes.data ?? [];
@@ -49,14 +52,6 @@ export async function POST(req: Request) {
       is_exam: boolean;
       category: string | null;
       subject_id: string | null;
-    }[];
-  const resources =
-    (resourcesRes.data ?? []) as {
-      title: string;
-      kind: string;
-      subject_id: string | null;
-      url: string | null;
-      meta: { summary?: string } | null;
     }[];
   const nameOf = (id: string | null) => subjects.find((s) => s.id === id)?.name ?? "";
 
@@ -82,16 +77,6 @@ export async function POST(req: Request) {
           `- ${t.title} [${t.category ?? (t.is_exam ? "exam" : "task")}]${
             t.subject_id ? ` · ${nameOf(t.subject_id)}` : ""
           }${t.due_at ? ` · due ${new Date(t.due_at).toDateString()}` : ""}`,
-      )
-      .join("\n") || "none";
-
-  const resList =
-    resources
-      .map(
-        (r) =>
-          `- ${r.title} (${r.kind}${r.subject_id ? `, ${nameOf(r.subject_id)}` : ""})${
-            r.url ? ` [${r.url}]` : ""
-          }${r.meta?.summary ? `\n    summary: ${r.meta.summary}` : ""}`,
       )
       .join("\n") || "none";
 
