@@ -4,6 +4,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { AssistantChat } from "@/features/assistant/AssistantChat";
 import { FocusOverlay } from "@/features/focus/FocusOverlay";
+import { Onboarding } from "@/features/onboarding/Onboarding";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { PageTransition } from "@/components/layout/PageTransition";
 import { createClient } from "@/lib/supabase/server";
@@ -35,6 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <AssistantChat />
       <FocusOverlay />
       <CommandPalette />
+      <Onboarding />
     </div>
   );
 }
