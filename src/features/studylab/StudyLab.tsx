@@ -30,9 +30,11 @@ import { useErrorStore } from "@/stores/error-store";
 
 const MODEL_OPTIONS = AI_MODELS.map((m) => ({ value: m.value, label: m.label }));
 
-type GenType = "flashcards" | "written" | "practical";
+type GenType = "flashcards" | "written" | "practical" | "solver";
 type Difficulty = "easy" | "medium" | "hard";
 type ExamQ = { question: string; answer: string; points: number | null };
+type SolutionStep = { heading: string | null; detail: string };
+type Solution = { steps: SolutionStep[]; answer: string; problem: string };
 type SavedExam = {
   id: string;
   type: GenType;
@@ -65,6 +67,7 @@ const TYPES: { id: GenType; label: string; hint: string }[] = [
   { id: "flashcards", label: "Flashcards", hint: "Q&A cards saved to a deck" },
   { id: "written", label: "Written Exam", hint: "Conceptual / short-answer" },
   { id: "practical", label: "Practical Exam", hint: "Problems with worked solutions" },
+  { id: "solver", label: "Solver", hint: "Step-by-step solution to a problem" },
 ];
 const DIFFS: Difficulty[] = ["easy", "medium", "hard"];
 const DIFF_STYLE: Record<Difficulty, string> = {
@@ -86,12 +89,14 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
   const [error, setError] = useState<string | null>(null);
 
   const [dialog, setDialog] = useState(false);
-  const [opts, setOpts] = useState<{ type: GenType; difficulty: Difficulty; count: number; prompt: string }>({
+  const [opts, setOpts] = useState<{ type: GenType; difficulty: Difficulty; count: number; prompt: string; problem: string }>({
     type: "flashcards",
     difficulty: "medium",
     count: 8,
     prompt: "",
+    problem: "",
   });
+  const [solution, setSolution] = useState<Solution | null>(null);
   const [generating, setGenerating] = useState(false);
   const [model, setModel] = useAiModel();
   const [openExam, setOpenExam] = useState<SavedExam | null>(null);
@@ -171,6 +176,8 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
         type: string;
         cards?: { front: string; back: string }[];
         questions?: ExamQ[];
+        steps?: SolutionStep[];
+        answer?: string;
       };
       const json = await apiFetch<GenResult>(
         "/api/study/generate",
@@ -183,12 +190,15 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
             difficulty: opts.difficulty,
             count: opts.count,
             customPrompt: opts.prompt,
+            problem: opts.problem,
             model,
           }),
         },
         { title: "Couldn't generate your study set" },
       );
-      if (json.type === "flashcards") {
+      if (json.type === "solver") {
+        setSolution({ steps: json.steps ?? [], answer: json.answer ?? "", problem: opts.problem.trim() });
+      } else if (json.type === "flashcards") {
         const rows = (json.cards as { front: string; back: string }[]).map((c) => ({
           user_id: userId,
           subject_id: selectedId,
@@ -609,7 +619,7 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
         <div className="space-y-4">
           <div>
             <p className="mb-2 text-xs font-medium text-muted">Type</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {TYPES.map((t) => (
                 <button
                   key={t.id}
@@ -626,41 +636,56 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
             </div>
           </div>
 
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <p className="mb-2 text-xs font-medium text-muted">Difficulty</p>
-              <div className="flex gap-2">
-                {DIFFS.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setOpts({ ...opts, difficulty: d })}
-                    className={cn(
-                      "pressable flex-1 rounded-lg py-2 text-sm capitalize",
-                      opts.difficulty === d ? "neu text-primary" : "neu-inset text-muted",
-                    )}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="w-24">
-              <p className="mb-2 text-xs font-medium text-muted">
-                {opts.type === "flashcards" ? "Flashcards" : "Questions"}
-              </p>
-              <input
-                type="number"
-                min={1}
-                max={30}
-                value={opts.count}
-                onChange={(e) => setOpts({ ...opts, count: parseInt(e.target.value) || 1 })}
-                className={field}
+          {opts.type === "solver" ? (
+            <div>
+              <p className="mb-2 text-xs font-medium text-muted">Problem to solve</p>
+              <textarea
+                value={opts.problem}
+                onChange={(e) => setOpts({ ...opts, problem: e.target.value })}
+                placeholder="Paste the exercise / exam question. e.g. Evaluate $\int_0^1 x e^x\,dx$."
+                rows={4}
+                className={cn(field, "resize-none")}
               />
             </div>
-          </div>
+          ) : (
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <p className="mb-2 text-xs font-medium text-muted">Difficulty</p>
+                <div className="flex gap-2">
+                  {DIFFS.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setOpts({ ...opts, difficulty: d })}
+                      className={cn(
+                        "pressable flex-1 rounded-lg py-2 text-sm capitalize",
+                        opts.difficulty === d ? "neu text-primary" : "neu-inset text-muted",
+                      )}
+                    >
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="w-24">
+                <p className="mb-2 text-xs font-medium text-muted">
+                  {opts.type === "flashcards" ? "Flashcards" : "Questions"}
+                </p>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={opts.count}
+                  onChange={(e) => setOpts({ ...opts, count: parseInt(e.target.value) || 1 })}
+                  className={field}
+                />
+              </div>
+            </div>
+          )}
 
           <div>
-            <p className="mb-2 text-xs font-medium text-muted">Custom instructions (optional)</p>
+            <p className="mb-2 text-xs font-medium text-muted">
+              {opts.type === "solver" ? "Extra instructions (optional)" : "Custom instructions (optional)"}
+            </p>
             <textarea
               value={opts.prompt}
               onChange={(e) => setOpts({ ...opts, prompt: e.target.value })}
@@ -685,14 +710,62 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
             </button>
             <button
               onClick={generate}
-              disabled={generating}
+              disabled={generating || (opts.type === "solver" && !opts.problem.trim())}
               className="neu-btn flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:opacity-50"
             >
               {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {generating ? "Generating…" : "Generate"}
+              {generating ? (opts.type === "solver" ? "Solving…" : "Generating…") : opts.type === "solver" ? "Solve" : "Generate"}
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Solver result — step-by-step worked solution */}
+      <Modal open={!!solution} onClose={() => setSolution(null)} title="Step-by-step solution">
+        {solution && (
+          <div className="space-y-4">
+            {solution.problem && (
+              <div className="neu-inset rounded-xl p-4">
+                <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted">Problem</p>
+                <div className="text-sm leading-relaxed">
+                  <MathText>{solution.problem}</MathText>
+                </div>
+              </div>
+            )}
+            <ol className="max-h-[55vh] space-y-3 overflow-y-auto pr-1">
+              {solution.steps.map((s, i) => (
+                <li key={i} className="neu rounded-2xl p-4">
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="neu-inset grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold text-primary"
+                      data-numeric
+                      style={{ fontFamily: "var(--font-display)" }}
+                    >
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      {s.heading && <p className="mb-1 text-sm font-semibold leading-snug"><MathText>{s.heading}</MathText></p>}
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
+                        <MathText>{s.detail}</MathText>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <div className="rounded-xl border-l-2 border-primary/60 bg-primary/5 px-4 py-3">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/80">Final answer</p>
+              <div className="text-sm font-medium leading-relaxed">
+                <MathText>{solution.answer}</MathText>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button onClick={() => setSolution(null)} className="neu-btn px-4 py-2 text-sm font-medium">
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* Single exam, opened on its own */}

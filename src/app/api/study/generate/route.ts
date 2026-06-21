@@ -24,6 +24,19 @@ const ExamSchema = z.object({
     .describe("Exam questions with model answers"),
 });
 
+// Solver mode: one problem statement in, a verified step-by-step solution out.
+const SolverSchema = z.object({
+  steps: z
+    .array(
+      z.object({
+        heading: z.string().nullable().describe("Short label for the step, or null"),
+        detail: z.string().describe("The reasoning for this step, with LaTeX maths"),
+      }),
+    )
+    .describe("Ordered solution steps, each explained"),
+  answer: z.string().describe("The final answer, stated clearly"),
+});
+
 export async function POST(req: Request) {
   try {
   const supabase = await createClient();
@@ -32,7 +45,7 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { subjectId, type, difficulty, count, customPrompt, model } = await req.json();
+  const { subjectId, type, difficulty, count, customPrompt, model, problem } = await req.json();
   const preferred = isValidModel(model) ? model : undefined;
 
   // Ground the generation in the subject + its filed resources.
@@ -53,6 +66,30 @@ export async function POST(req: Request) {
           `- [${r.kind}] ${r.title}${r.meta?.summary ? ` — ${r.meta.summary}` : ""}`,
       )
       .join("\n") || "(no uploaded materials yet)";
+
+  // Solver mode: no difficulty/count — a fixed problem statement to work through.
+  if (type === "solver") {
+    const statement = String(problem ?? "").trim();
+    if (!statement) {
+      return NextResponse.json({ error: "Add the problem you want solved." }, { status: 400 });
+    }
+    const solverPrompt =
+      `You are an expert tutor for "${subjectName}". Solve the problem below and ` +
+      `SHOW EVERY STEP so a student can follow and learn the method. Be rigorous: ` +
+      `state assumptions, justify each step, and double-check the final answer. ` +
+      `Where the course materials imply a specific method, use that method. ` +
+      `Format ALL mathematics as LaTeX: $...$ inline and $$...$$ displayed.\n` +
+      (customPrompt ? `Extra instructions from the student: ${customPrompt}\n` : "") +
+      `\nProblem to solve:\n${statement}\n` +
+      `\nCourse materials for context:\n${materials}`;
+    const object = await generateJsonAI({
+      schema: SolverSchema,
+      prompt: solverPrompt,
+      jsonShape: `{ "steps": [ { "heading": "short label or null", "detail": "explanation with LaTeX maths" } ], "answer": "the final answer" }`,
+      preferred,
+    });
+    return NextResponse.json({ type, ...object });
+  }
 
   const n = Math.min(Math.max(Number(count) || 8, 1), 30);
   const kindLine =
