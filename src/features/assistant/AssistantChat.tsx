@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Sparkles, Send, X, Loader2, AlertTriangle } from "lucide-react";
+import { Mascot } from "@/components/ui/Mascot";
 import { MathText } from "@/components/ui/MathText";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { NVIDIA_MODELS } from "@/lib/ai/catalog";
@@ -85,9 +86,9 @@ export function AssistantChat() {
       <button
         onClick={() => setOpen(true)}
         aria-label="Ask STiDY"
-        className="neu-btn fixed bottom-6 right-6 z-40 grid h-12 w-12 place-items-center rounded-full text-primary"
+        className="neu-btn pressable fixed bottom-6 right-6 z-40 grid h-14 w-14 place-items-center overflow-hidden rounded-full"
       >
-        <Sparkles className="h-5 w-5" />
+        <Mascot size={38} animate={false} />
       </button>
 
       <AnimatePresence>
