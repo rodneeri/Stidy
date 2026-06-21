@@ -35,6 +35,7 @@ type Difficulty = "easy" | "medium" | "hard";
 type ExamQ = { question: string; answer: string; points: number | null };
 type SolutionStep = { heading: string | null; detail: string };
 type Solution = { steps: SolutionStep[]; answer: string; problem: string };
+type SavedSolution = Solution & { id: string; createdAt: number };
 type SavedExam = {
   id: string;
   type: GenType;
@@ -58,6 +59,22 @@ function loadExamHistory(subjectId: string): SavedExam[] {
 function saveExamHistory(subjectId: string, list: SavedExam[]) {
   try {
     localStorage.setItem(examKey(subjectId), JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+}
+
+const solnKey = (subjectId: string) => `stidy-solutions-${subjectId}`;
+function loadSolutions(subjectId: string): SavedSolution[] {
+  try {
+    return JSON.parse(localStorage.getItem(solnKey(subjectId)) || "[]");
+  } catch {
+    return [];
+  }
+}
+function saveSolutions(subjectId: string, list: SavedSolution[]) {
+  try {
+    localStorage.setItem(solnKey(subjectId), JSON.stringify(list));
   } catch {
     /* ignore */
   }
@@ -97,6 +114,9 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
     problem: "",
   });
   const [solution, setSolution] = useState<Solution | null>(null);
+  const [solutions, setSolutions] = useState<SavedSolution[]>([]);
+  const [subjectResources, setSubjectResources] = useState<{ id: string; title: string; kind: string }[]>([]);
+  const [pickedResources, setPickedResources] = useState<string[]>([]);
   const [generating, setGenerating] = useState(false);
   const [model, setModel] = useAiModel();
   const [openExam, setOpenExam] = useState<SavedExam | null>(null);
@@ -156,6 +176,8 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
     setHistory(loadExamHistory(selectedId));
     setSets(loadSets(selectedId));
     setOpenSetId(null);
+    setSolutions(loadSolutions(selectedId));
+    setPickedResources([]);
   }
 
   useEffect(() => {
@@ -166,6 +188,21 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
     if (selectedId) loadCards(selectedId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
+
+  // The subject's filed resources — for the "Materials to use" picker so the
+  // student can narrow what grounds the AI (default: all of them).
+  useEffect(() => {
+    if (!selectedId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("resources")
+        .select("id, title, kind")
+        .eq("subject_id", selectedId)
+        .order("created_at", { ascending: false });
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSubjectResources((data as { id: string; title: string; kind: string }[]) ?? []);
+    })();
+  }, [selectedId, supabase]);
 
   async function generate() {
     if (!selectedId || !userId) return;
@@ -191,13 +228,26 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
             count: opts.count,
             customPrompt: opts.prompt,
             problem: opts.problem,
+            resourceIds: pickedResources.length ? pickedResources : undefined,
             model,
           }),
         },
         { title: "Couldn't generate your study set" },
       );
       if (json.type === "solver") {
-        setSolution({ steps: json.steps ?? [], answer: json.answer ?? "", problem: opts.problem.trim() });
+        const sol: SavedSolution = {
+          id: crypto.randomUUID(),
+          problem: opts.problem.trim(),
+          steps: json.steps ?? [],
+          answer: json.answer ?? "",
+          createdAt: Date.now(),
+        };
+        if (selectedId) {
+          const next = [sol, ...loadSolutions(selectedId)].slice(0, 20);
+          saveSolutions(selectedId, next);
+          setSolutions(next);
+        }
+        setSolution(sol);
       } else if (json.type === "flashcards") {
         const rows = (json.cards as { front: string; back: string }[]).map((c) => ({
           user_id: userId,
@@ -474,6 +524,37 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
             </div>
           )}
 
+          {/* Saved solutions (Solver history, per-subject) */}
+          {solutions.length > 0 && (
+            <div className="glass space-y-2 p-5">
+              <h2 className="font-semibold">Saved solutions</h2>
+              <div className="space-y-1">
+                {solutions.map((s) => (
+                  <div key={s.id} className="flex items-center gap-1">
+                    <button
+                      onClick={() => setSolution(s)}
+                      className="pressable flex min-w-0 flex-1 items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm hover:text-primary"
+                    >
+                      <span className="truncate">{s.problem || "Solved problem"}</span>
+                      <span className="shrink-0 text-xs text-muted">
+                        {new Date(s.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                      </span>
+                    </button>
+                    <ConfirmDelete
+                      label="Delete saved solution"
+                      onConfirm={() => {
+                        if (!selectedId) return;
+                        const next = solutions.filter((x) => x.id !== s.id);
+                        saveSolutions(selectedId, next);
+                        setSolutions(next);
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Flashcard sets grid, or the open set's stack */}
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2 px-1">
@@ -694,6 +775,36 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
               className={cn(field, "resize-none")}
             />
           </div>
+
+          {subjectResources.length > 0 && (
+            <div>
+              <p className="mb-2 flex items-center justify-between text-xs font-medium text-muted">
+                <span>Materials to ground the AI</span>
+                <span className="text-[11px]">{pickedResources.length ? `${pickedResources.length} selected` : "all files"}</span>
+              </p>
+              <div className="neu-inset flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-xl p-2">
+                {subjectResources.map((r) => {
+                  const on = pickedResources.includes(r.id);
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() =>
+                        setPickedResources((p) => (on ? p.filter((x) => x !== r.id) : [...p, r.id]))
+                      }
+                      title={r.title}
+                      className={cn(
+                        "pressable max-w-[14rem] truncate rounded-full px-2.5 py-1 text-[11px]",
+                        on ? "neu text-primary" : "text-muted hover:text-foreground",
+                      )}
+                    >
+                      {r.title}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div>
             <p className="mb-2 text-xs font-medium text-muted">Model</p>
