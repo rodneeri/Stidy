@@ -27,7 +27,11 @@ export function CoworkingHub({ userId, displayName }: Props) {
   const [isPrivate, setIsPrivate] = useState(true);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Separate errors so a create-room failure shows under the New-room card and a
+  // join failure shows under the Join card (they used to share one state, which
+  // surfaced create errors under the wrong button).
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [joinError, setJoinError] = useState<string | null>(null);
   const lobbyRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const load = useCallback(async () => {
@@ -91,7 +95,7 @@ export function CoworkingHub({ userId, displayName }: Props) {
     const n = name.trim();
     if (!n || busy) return;
     setBusy(true);
-    setError(null);
+    setCreateError(null);
     const { data, error: e } = await supabase
       .from("cowork_rooms")
       .insert({ owner_id: userId, name: n, is_private: isPrivate })
@@ -99,7 +103,7 @@ export function CoworkingHub({ userId, displayName }: Props) {
       .single();
     setBusy(false);
     if (e) {
-      setError(isMissingTable(e) ? "Coworking isn't enabled yet." : e.message);
+      setCreateError(isMissingTable(e) ? "Coworking isn't enabled yet." : e.message);
       return;
     }
     setName("");
@@ -121,11 +125,11 @@ export function CoworkingHub({ userId, displayName }: Props) {
     const c = (raw ?? code).trim();
     if (!c || busy) return;
     setBusy(true);
-    setError(null);
+    setJoinError(null);
     const { data, error: e } = await supabase.rpc("join_cowork_room", { p_code: c });
     setBusy(false);
     if (e) {
-      setError(/not found/i.test(e.message) ? "No room with that code." : e.message);
+      setJoinError(/not found/i.test(e.message) ? "No room with that code." : e.message);
       return;
     }
     setCode("");
@@ -196,6 +200,7 @@ export function CoworkingHub({ userId, displayName }: Props) {
               <button onClick={createRoom} disabled={!name.trim() || busy} className="neu-btn w-full rounded-lg py-2 text-sm font-medium text-primary disabled:opacity-40">
                 Create &amp; enter
               </button>
+              {createError && <p className="mt-2 text-xs text-warning">{createError}</p>}
             </div>
 
             <div className="glass p-5">
@@ -210,7 +215,7 @@ export function CoworkingHub({ userId, displayName }: Props) {
               <button onClick={() => joinByCode()} disabled={!code.trim() || busy} className="neu-btn w-full rounded-lg py-2 text-sm font-medium text-primary disabled:opacity-40">
                 Join room
               </button>
-              {error && <p className="mt-2 text-xs text-warning">{error}</p>}
+              {joinError && <p className="mt-2 text-xs text-warning">{joinError}</p>}
             </div>
           </div>
 

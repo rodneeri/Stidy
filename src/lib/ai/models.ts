@@ -203,9 +203,30 @@ export async function generateJsonAI<T>(args: {
         prompt: full,
         maxRetries: SDK_MAX_RETRIES,
         abortSignal: AbortSignal.timeout(Math.min(PER_ATTEMPT_MS, left())),
+        // Gemini 2.5 Flash is a *thinking* model: on a heavy prompt its hidden
+        // "thoughts" can eat the entire output budget and return EMPTY text —
+        // which then surfaced as a raw "Unexpected end of JSON input" 500. We
+        // don't need chain-of-thought for structured output, so switch thinking
+        // off. Non-Google providers ignore this key.
+        providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
-      const parsed = schema.safeParse(JSON.parse(extractJson(text)));
+      // Treat an empty or unparseable reply as a provider miss and fall through
+      // to the next one — never let JSON.parse throw the cryptic
+      // "Unexpected end of JSON input" out of the whole request.
+      const candidate = extractJson(text).trim();
+      if (!candidate) {
+        lastErr = new Error(`${order[i].label} returned an empty response.`);
+        continue;
+      }
+      let json: unknown;
+      try {
+        json = JSON.parse(candidate);
+      } catch {
+        lastErr = new Error(`${order[i].label} returned malformed JSON.`);
+        continue;
+      }
+      const parsed = schema.safeParse(json);
       if (parsed.success) return parsed.data;
       lastErr = new Error("The model's JSON didn't match the expected shape.");
     } catch (e) {
@@ -305,6 +326,14 @@ export function aiErrorResponse(err: unknown): { status: number; body: { error: 
           retry ? ` — try again in ~${retry}s` : " — wait a moment and retry"
         }.`,
       },
+    };
+  }
+  // Every provider answered but none produced usable JSON (empty/malformed/wrong
+  // shape) — a transient model hiccup. Surface as a clean retryable state.
+  if (/empty response|malformed json|didn't match the expected shape/i.test(m)) {
+    return {
+      status: 503,
+      body: { error: "The AI returned an unusable answer this time — try again, lower the count, or pick a different model in Settings." },
     };
   }
   return { status: 500, body: { error: m } };
