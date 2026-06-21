@@ -1,0 +1,14 @@
+{
+  "projectId": "f460893c-3b0f-42f5-a576-8986cf11db79",
+  "pkg": "stidy",
+  "globalName": "Stidy",
+  "shape": "package",
+  "srcDir": "src/components/ui",
+  "tsconfig": "tsconfig.json",
+  "componentSrcMap": {
+    "MathText": null,
+    "Portal": null
+  },
+  "cssEntry": "_ds.css",
+  "readmeHeader": ".design-sync/conventions.md"
+}
