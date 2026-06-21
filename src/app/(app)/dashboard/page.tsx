@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Subject } from "@/types/db";
 import { DashboardGrid, type DashData } from "@/features/dashboard/DashboardGrid";
+import { StudyCharts } from "@/features/dashboard/StudyCharts";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -59,5 +60,10 @@ export default async function DashboardPage() {
     weekFocusSec,
   };
 
-  return <DashboardGrid data={data} />;
+  return (
+    <div className="space-y-4">
+      <DashboardGrid data={data} />
+      <StudyCharts />
+    </div>
+  );
 }
