@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Sparkles, Loader2, Layers, FileText, Pencil, Check, Flame, Eye, EyeOff, ArrowLeft, Trophy } from "lucide-react";
+import { Sparkles, Loader2, Layers, Pencil, Check, Flame, Eye, EyeOff, ArrowLeft, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Flashcard } from "@/types/db";
 import { Modal } from "@/components/ui/Modal";
@@ -768,100 +768,126 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
         )}
       </Modal>
 
-      {/* Single exam, opened on its own */}
-      <Modal
-        open={!!openExam}
-        onClose={() => setOpenExam(null)}
-        title={openExam ? `${examName(openExam)} · ${openExam.difficulty}` : "Exam"}
-      >
+      {/* Single exam — full-screen, readable "exam paper" view (not a cramped modal) */}
+      <AnimatePresence>
         {openExam && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-xs text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5 text-primary" />
-                {openExam.questions.length} questions
-              </span>
-              {openExam.questions.some((q) => q.points != null) && (
-                <span className="neu-inset rounded-full px-2.5 py-1 font-medium" data-numeric>
-                  {openExam.questions.reduce((a, q) => a + (q.points ?? 0), 0)} pts total
-                </span>
-              )}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[60] overflow-y-auto bg-background/95 backdrop-blur-sm"
+          >
+            <div className="sticky top-0 z-10 border-b border-foreground/10 bg-background/80 backdrop-blur">
+              <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3 sm:px-6">
+                <button
+                  onClick={() => setOpenExam(null)}
+                  aria-label="Back to Study Lab"
+                  className="pressable grid h-9 w-9 shrink-0 place-items-center rounded-xl text-muted hover:text-primary"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <h2 className="truncate text-base font-semibold leading-tight">{examName(openExam)}</h2>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
+                    <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium capitalize", DIFF_STYLE[openExam.difficulty])}>
+                      {openExam.difficulty}
+                    </span>
+                    <span>{openExam.questions.length} questions</span>
+                    {openExam.questions.some((q) => q.points != null) && (
+                      <span data-numeric>· {openExam.questions.reduce((a, q) => a + (q.points ?? 0), 0)} pts</span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  onClick={() =>
+                    setRevealed((s) =>
+                      s.size === openExam.questions.length
+                        ? new Set()
+                        : new Set(openExam.questions.map((_, i) => i)),
+                    )
+                  }
+                  className="neu-btn shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-primary"
+                >
+                  {revealed.size === openExam.questions.length ? "Hide all" : "Reveal all"}
+                </button>
+              </div>
             </div>
-            <ol className="max-h-[60vh] space-y-4 overflow-y-auto pr-1">
-              {openExam.questions.map((q, i) => {
-                const isOpen = revealed.has(i);
-                return (
-                  <li key={i} className="neu rounded-2xl p-5">
-                    <div className="flex items-start gap-3.5">
-                      <span
-                        className="neu-inset grid h-8 w-8 shrink-0 place-items-center rounded-full text-sm font-semibold text-primary"
-                        data-numeric
-                        style={{ fontFamily: "var(--font-display)" }}
-                      >
-                        {i + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-base font-semibold leading-snug">
-                          <MathText>{q.question}</MathText>
-                        </p>
-                        <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                          {q.points != null && (
-                            <span className="neu-inset rounded-full px-2.5 py-0.5 text-[11px] font-medium text-muted" data-numeric>
-                              {q.points} pts
-                            </span>
-                          )}
-                          <button
-                            onClick={() =>
-                              setRevealed((s) => {
-                                const n = new Set(s);
-                                if (n.has(i)) n.delete(i);
-                                else n.add(i);
-                                return n;
-                              })
-                            }
-                            className="pressable inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-primary"
-                          >
-                            {isOpen ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                            {isOpen ? "Hide solution" : "Show solution"}
-                          </button>
-                        </div>
-                        <AnimatePresence initial={false}>
-                          {isOpen && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-                              className="overflow-hidden"
+
+            <div className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
+              <ol className="space-y-5">
+                {openExam.questions.map((q, i) => {
+                  const isOpen = revealed.has(i);
+                  return (
+                    <li key={i} className="glass rounded-2xl p-5 sm:p-6">
+                      <div className="flex items-start gap-3.5">
+                        <span
+                          className="neu-inset grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-semibold text-primary"
+                          data-numeric
+                          style={{ fontFamily: "var(--font-display)" }}
+                        >
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-base font-semibold leading-relaxed sm:text-lg">
+                            <MathText>{q.question}</MathText>
+                          </div>
+                          <div className="mt-3 flex flex-wrap items-center gap-2">
+                            {q.points != null && (
+                              <span className="neu-inset rounded-full px-2.5 py-0.5 text-[11px] font-medium text-muted" data-numeric>
+                                {q.points} pts
+                              </span>
+                            )}
+                            <button
+                              onClick={() =>
+                                setRevealed((s) => {
+                                  const n = new Set(s);
+                                  if (n.has(i)) n.delete(i);
+                                  else n.add(i);
+                                  return n;
+                                })
+                              }
+                              className="pressable inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold text-primary"
                             >
-                              <div className="mt-3 rounded-xl border-l-2 border-primary/60 bg-primary/5 px-4 py-3">
-                                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/80">
-                                  Worked solution
-                                </p>
-                                <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90">
-                                  <MathText>{q.answer}</MathText>
+                              {isOpen ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                              {isOpen ? "Hide solution" : "Show solution"}
+                            </button>
+                          </div>
+                          <AnimatePresence initial={false}>
+                            {isOpen && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                                className="overflow-hidden"
+                              >
+                                <div className="mt-3 rounded-xl border-l-2 border-primary/60 bg-primary/5 px-4 py-3.5">
+                                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-primary/80">
+                                    Worked solution
+                                  </p>
+                                  <div className="whitespace-pre-wrap text-sm leading-relaxed text-foreground/90 sm:text-[15px]">
+                                    <MathText>{q.answer}</MathText>
+                                  </div>
                                 </div>
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-            <div className="flex justify-end">
-              <button
-                onClick={() => setOpenExam(null)}
-                className="neu-btn px-4 py-2 text-sm font-medium"
-              >
-                Close
-              </button>
+                    </li>
+                  );
+                })}
+              </ol>
+              <div className="mt-8 flex justify-center">
+                <button onClick={() => setOpenExam(null)} className="neu-btn px-5 py-2.5 text-sm font-medium">
+                  Close exam
+                </button>
+              </div>
             </div>
-          </div>
+          </motion.div>
         )}
-      </Modal>
+      </AnimatePresence>
 
       {/* Flashcard review (SRS) */}
       <Modal open={reviewing} onClose={() => setReviewing(false)} title="Review">

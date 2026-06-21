@@ -11,6 +11,7 @@ import {
   Sparkles,
   GripVertical,
   Pencil,
+  Check,
   ExternalLink,
   Filter,
   X,
@@ -76,6 +77,8 @@ function FileRow({
   const controls = useDragControls();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(r.title);
+  const subjLabel = subjectOpts.find((o) => o.value === (r.subject_id ?? ""))?.label ?? "Unassigned";
+  const kindLabel = KIND_OPTS.find((o) => o.value === r.kind)?.label ?? r.kind;
 
   return (
     <motion.div
@@ -104,9 +107,8 @@ function FileRow({
           value={name}
           onChange={(e) => setName(e.target.value)}
           onBlur={() => {
-            setEditing(false);
             if (name.trim() && name !== r.title) onRename(r.id, name.trim());
-            else setName(r.title);
+            else if (!name.trim()) setName(r.title);
           }}
           onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
           className="field min-w-0 flex-1 rounded-lg px-2 py-0.5 text-sm outline-none"
@@ -120,27 +122,50 @@ function FileRow({
         <span className="hidden shrink-0 text-[11px] tabular-nums text-muted sm:inline">{fmtBytes(r.size_bytes)}</span>
       ) : null}
 
+      {/* Type + Subject: clean static labels normally; editable dropdowns only in edit mode. */}
+      {editing ? (
+        <>
+          <Dropdown
+            value={r.kind}
+            options={KIND_OPTS}
+            onChange={(v) => onCategory(r.id, v as ResourceKind)}
+            className="hidden w-24 shrink-0 sm:block"
+            up
+          />
+          <Dropdown
+            value={r.subject_id ?? ""}
+            options={subjectOpts}
+            onChange={(v) => onReassign(r.id, v)}
+            className="hidden w-32 shrink-0 md:block"
+            up
+          />
+        </>
+      ) : (
+        <>
+          <span
+            className={cn(
+              "hidden shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize sm:inline",
+              KIND_STYLE[r.kind],
+            )}
+          >
+            {kindLabel}
+          </span>
+          <span className="hidden w-32 shrink-0 truncate text-right text-[11px] text-muted md:inline">
+            {subjLabel}
+          </span>
+        </>
+      )}
+
       <button
-        onClick={() => setEditing(true)}
-        aria-label="Rename"
+        onClick={() => {
+          if (editing && name.trim() && name !== r.title) onRename(r.id, name.trim());
+          setEditing((v) => !v);
+        }}
+        aria-label={editing ? "Done editing" : "Edit type, subject & name"}
         className="pressable hidden h-6 w-6 shrink-0 place-items-center rounded-lg text-muted hover:text-primary sm:grid"
       >
-        <Pencil className="h-3 w-3" />
+        {editing ? <Check className="h-3 w-3 text-primary" /> : <Pencil className="h-3 w-3" />}
       </button>
-      <Dropdown
-        value={r.kind}
-        options={KIND_OPTS}
-        onChange={(v) => onCategory(r.id, v as ResourceKind)}
-        className="hidden w-24 shrink-0 sm:block"
-        up
-      />
-      <Dropdown
-        value={r.subject_id ?? ""}
-        options={subjectOpts}
-        onChange={(v) => onReassign(r.id, v)}
-        className="hidden w-32 shrink-0 md:block"
-        up
-      />
       <button
         onClick={() => onOpen(r)}
         aria-label="Open"
