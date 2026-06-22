@@ -8,6 +8,7 @@ import type { Flashcard } from "@/types/db";
 import { Modal } from "@/components/ui/Modal";
 import { ConfirmDelete } from "@/components/ui/ConfirmDelete";
 import { MathText } from "@/components/ui/MathText";
+import { Portal } from "@/components/ui/Portal";
 import { Dropdown } from "@/components/ui/Dropdown";
 import { AI_MODELS } from "@/lib/ai/catalog";
 import { useAiModel } from "@/lib/ai/useAiModel";
@@ -199,7 +200,6 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
         .select("id, title, kind")
         .eq("subject_id", selectedId)
         .order("created_at", { ascending: false });
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSubjectResources((data as { id: string; title: string; kind: string }[]) ?? []);
     })();
   }, [selectedId, supabase]);
@@ -879,7 +879,11 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
         )}
       </Modal>
 
-      {/* Single exam — full-screen, readable "exam paper" view (not a cramped modal) */}
+      {/* Single exam — full-screen, readable "exam paper" view (not a cramped modal).
+          Portaled to <body>: the PageTransition wrapper sets will-change/transform,
+          which makes `position: fixed` anchor to the padded max-w-7xl column instead
+          of the viewport — that's what clipped the exam to half the screen. */}
+      <Portal>
       <AnimatePresence>
         {openExam && (
           <motion.div
@@ -999,6 +1003,7 @@ export function StudyLab({ initialSubject = null }: { initialSubject?: string | 
           </motion.div>
         )}
       </AnimatePresence>
+      </Portal>
 
       {/* Flashcard review (SRS) */}
       <Modal open={reviewing} onClose={() => setReviewing(false)} title="Review">

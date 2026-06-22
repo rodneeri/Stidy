@@ -207,41 +207,42 @@ export function FlashcardStack({ cards, onUpdate, onDelete, onDeleteAll, setName
                         style={{ transform: `translateY(${(i + 1) * 6}px) scale(${1 - (i + 1) * 0.03})`, opacity: 0.6 - i * 0.2 }}
                       />
                     ))}
-                    {/* mode="wait" (not popLayout): on React 19, popLayout can
-                        throw removeChild DOM errors during reconciliation —
-                        those fire outside render so the ErrorBoundary can't
-                        catch them, crashing the whole view after a shuffle. */}
-                    <AnimatePresence mode="wait" initial={false}>
+                    {/* No AnimatePresence here on purpose. The earlier crash —
+                        "still crashes when shuffling" — is framer-motion's exit
+                        animation racing the parent unmounting this subtree on
+                        reshuffle: React 19 then throws removeChild ASYNCHRONOUSLY
+                        (outside render), so the ErrorBoundary can't catch it and
+                        the whole view dies. With no exit/presence, React unmounts
+                        the old card cleanly on key change. We keep the enter-pop
+                        (key={top.id}) and the 3D flip — both are crash-safe. */}
+                    <motion.div
+                      key={top.id}
+                      initial={{ opacity: 0, scale: 0.92 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+                      className="absolute inset-0 cursor-pointer"
+                      onClick={() => setFlipped((f) => !f)}
+                    >
                       <motion.div
-                        key={top.id}
-                        initial={{ opacity: 0, scale: 0.92 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ x: -340, rotate: -14, opacity: 0 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                        className="absolute inset-0 cursor-pointer"
-                        onClick={() => setFlipped((f) => !f)}
+                        className="relative h-full w-full"
+                        style={{ transformStyle: "preserve-3d" }}
+                        animate={{ rotateY: flipped ? 180 : 0 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 26 }}
                       >
-                        <motion.div
-                          className="relative h-full w-full"
-                          style={{ transformStyle: "preserve-3d" }}
-                          animate={{ rotateY: flipped ? 180 : 0 }}
-                          transition={{ type: "spring", stiffness: 260, damping: 26 }}
-                        >
-                          <div className="glass absolute inset-0 grid place-items-center p-6 text-center" style={{ backfaceVisibility: "hidden" }}>
-                            <div>
-                              <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted">Question</p>
-                              <p className="text-lg font-semibold"><MathText>{top.front}</MathText></p>
-                            </div>
+                        <div className="glass absolute inset-0 grid place-items-center p-6 text-center" style={{ backfaceVisibility: "hidden" }}>
+                          <div>
+                            <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted">Question</p>
+                            <p className="text-lg font-semibold"><MathText>{top.front}</MathText></p>
                           </div>
-                          <div className="glass absolute inset-0 grid place-items-center overflow-auto p-6 text-center" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
-                            <div>
-                              <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted">Answer</p>
-                              <p className="text-base"><MathText>{top.back}</MathText></p>
-                            </div>
+                        </div>
+                        <div className="glass absolute inset-0 grid place-items-center overflow-auto p-6 text-center" style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+                          <div>
+                            <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted">Answer</p>
+                            <p className="text-base"><MathText>{top.back}</MathText></p>
                           </div>
-                        </motion.div>
+                        </div>
                       </motion.div>
-                    </AnimatePresence>
+                    </motion.div>
                   </div>
 
                   <div className="flex items-center gap-3">
