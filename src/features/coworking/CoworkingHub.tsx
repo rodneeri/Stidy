@@ -8,6 +8,7 @@ import { FadeIn } from "@/components/motion/FadeIn";
 import { cn } from "@/lib/utils";
 import { isMissingTable } from "@/features/coworking/util";
 import { CoworkRoom } from "@/features/coworking/CoworkRoom";
+import { FriendsPanel } from "@/features/coworking/FriendsPanel";
 
 interface Props {
   userId: string;
@@ -218,6 +219,9 @@ export function CoworkingHub({ userId, displayName }: Props) {
               {joinError && <p className="mt-2 text-xs text-warning">{joinError}</p>}
             </div>
           </div>
+
+          {/* Friends */}
+          <FriendsPanel userId={userId} />
 
           {/* My rooms */}
           <section>

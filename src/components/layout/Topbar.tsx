@@ -12,6 +12,7 @@ import {
   Settings as SettingsIcon,
   ShieldCheck,
   Menu,
+  Check,
 } from "lucide-react";
 import { useUiStore } from "@/stores/ui-store";
 import { ThemePicker } from "@/components/theme/ThemePicker";
@@ -23,6 +24,15 @@ import { signOut } from "@/app/(auth)/actions";
 import { isAdminEmail } from "@/config/admin";
 import { spring } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
+import { StatusDot } from "@/features/coworking/StatusDot";
+import {
+  getProfiles,
+  setMyStatus,
+  STATUS_META,
+  SELECTABLE_STATUSES,
+  type PresenceStatus,
+} from "@/features/coworking/social";
 
 interface TopbarProps {
   displayName: string;
@@ -213,8 +223,33 @@ function ProfileMenu({
   initial: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState<PresenceStatus>("offline");
   const ref = useRef<HTMLDivElement>(null);
   const admin = isAdminEmail(email);
+
+  // Load my current presence so the dot + selector reflect reality.
+  useEffect(() => {
+    let alive = true;
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        const id = data.user?.id;
+        if (!id) return;
+        getProfiles([id])
+          .then((p) => {
+            if (alive && p[0]) setStatus(p[0].status);
+          })
+          .catch(() => {});
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const changeStatus = (s: PresenceStatus) => {
+    setStatus(s);
+    void setMyStatus(s).catch(() => {});
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -238,9 +273,10 @@ function ProfileMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         title={email}
-        className="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
+        className="relative grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-sm font-semibold text-primary-foreground shadow-[var(--shadow-glow)]"
       >
         {initial}
+        <StatusDot status={status} ring className="absolute -bottom-0.5 -right-0.5 h-3 w-3" />
       </button>
 
       <AnimatePresence>
@@ -267,6 +303,34 @@ function ProfileMenu({
                   )}
                 </p>
                 <p className="truncate text-xs text-muted">{email}</p>
+              </div>
+            </div>
+
+            <div className="my-1 h-px bg-border" />
+
+            {/* Presence — broadcast to friends and coworking rooms. */}
+            <div className="px-2 py-1.5">
+              <p className="mb-1.5 px-1 text-[11px] font-medium uppercase tracking-wide text-muted">
+                Status
+              </p>
+              <div className="grid grid-cols-1 gap-0.5">
+                {SELECTABLE_STATUSES.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={status === s}
+                    onClick={() => changeStatus(s)}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm",
+                      status === s ? "neu text-foreground" : "text-muted hover:text-foreground",
+                    )}
+                  >
+                    <StatusDot status={s} className="h-2.5 w-2.5" />
+                    <span className="flex-1">{STATUS_META[s].label}</span>
+                    {status === s && <Check className="h-3.5 w-3.5 shrink-0 text-primary" />}
+                  </button>
+                ))}
               </div>
             </div>
 

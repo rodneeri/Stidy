@@ -7,6 +7,8 @@ import type { CoworkRoom as Room, CoworkMessage } from "@/types/db";
 import { cn } from "@/lib/utils";
 import { useErrorStore } from "@/stores/error-store";
 import { AppError } from "@/lib/errors";
+import { StatusDot } from "@/features/coworking/StatusDot";
+import { getProfiles, type PresenceStatus } from "@/features/coworking/social";
 
 interface Props {
   roomId: string;
@@ -35,6 +37,9 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
   const [room, setRoom] = useState<Room | null>(null);
   const [messages, setMessages] = useState<CoworkMessage[]>([]);
   const [present, setPresent] = useState<Present[]>([]);
+  const [roster, setRoster] = useState<
+    Record<string, { avatar_url: string | null; status: PresenceStatus }>
+  >({});
   const [draft, setDraft] = useState("");
   const [copied, setCopied] = useState(false);
   const [now, setNow] = useState(() => Date.now());
@@ -142,6 +147,30 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages]);
+
+  // Enrich the live roster with real identities (avatar + presence status).
+  // Keyed on the sorted id set so we only refetch when who's-here actually
+  // changes, not on every presence sync tick.
+  const presentKey = useMemo(
+    () => present.map((p) => p.user_id).sort().join(","),
+    [present],
+  );
+  useEffect(() => {
+    const ids = presentKey ? presentKey.split(",") : [];
+    if (!ids.length) return;
+    let alive = true;
+    getProfiles(ids)
+      .then((profs) => {
+        if (!alive) return;
+        const map: Record<string, { avatar_url: string | null; status: PresenceStatus }> = {};
+        for (const p of profs) map[p.id] = { avatar_url: p.avatar_url, status: p.status };
+        setRoster(map);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [presentKey]);
 
   const running = room ? room.timer_phase !== "idle" : false;
   const elapsed = room?.timer_started_at
@@ -296,19 +325,34 @@ export function CoworkRoom({ roomId, userId, displayName, onLeave }: Props) {
             <p className="mb-3 text-sm font-semibold tracking-tight">Here now</p>
             <div className="flex flex-wrap gap-2">
               {present.length === 0 && <p className="text-sm text-muted">Just getting started…</p>}
-              {present.map((p) => (
-                <span key={p.user_id} className="neu flex items-center gap-2 rounded-full py-1 pl-1 pr-3">
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-semibold text-primary-foreground">
-                    {(p.name || "?").charAt(0).toUpperCase()}
+              {present.map((p) => {
+                const prof = roster[p.user_id];
+                return (
+                  <span key={p.user_id} className="neu flex items-center gap-2 rounded-full py-1 pl-1 pr-3">
+                    <span className="relative shrink-0">
+                      {prof?.avatar_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={prof.avatar_url} alt="" className="h-7 w-7 rounded-full object-cover" />
+                      ) : (
+                        <span className="grid h-7 w-7 place-items-center rounded-full bg-gradient-to-br from-primary to-secondary text-xs font-semibold text-primary-foreground">
+                          {(p.name || "?").charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <StatusDot
+                        status={prof?.status ?? "online"}
+                        ring
+                        className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5"
+                      />
+                    </span>
+                    <span className="text-sm">{p.user_id === userId ? "You" : p.name}</span>
+                    {isOwner && p.user_id !== userId && (
+                      <button onClick={() => kick(p.user_id)} className="text-muted hover:text-warning" title="Remove">
+                        <UserMinus className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </span>
-                  <span className="text-sm">{p.user_id === userId ? "You" : p.name}</span>
-                  {isOwner && p.user_id !== userId && (
-                    <button onClick={() => kick(p.user_id)} className="text-muted hover:text-warning" title="Remove">
-                      <UserMinus className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                </span>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
